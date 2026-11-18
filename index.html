@@ -666,6 +666,7 @@ body.w3d #wsay { left: 50%; top: auto; bottom: 54px; transform: translateX(-50%)
 
 <script src="assets/w3d_core.js"></script>
 <script src="assets/w3d_anim.js"></script>
+<script src="assets/w3d_people.js"></script>
 <script async src="assets/w3d_rig.js"></script>
 <script src="assets/w3d_mv.js"></script>
 <script async src="assets/w3d_mine.js"></script>
@@ -29874,6 +29875,346 @@ function ldMakePostal(o) { return o && o.on ? ldSetup(o, [ldDie('Left die', LD_S
     } catch (e) { setTimeout(function () { throw e; }); }
     return sc;
   };
+  // ===================================================================================================
+  // V182: THE CAMP SHELTER, AS THE TEXT SAYS IT IS. The road camp used corrugated-tin sheds (sh_leanto, sh_leanto2). Now:
+  // - without a horse, "a lean-to of cut branches and your greatcoat": two forked uprights, a ridge pole, rafters slanting
+  //   back to the ground, cut boughs laid over them, the greatcoat thrown over half the roof, leaf litter to lie on;
+  // - with a horse, the tent off the saddle roll; a cold camp pulls brush over whichever it is, and lights no fire.
+  // ===================================================================================================
+  function mPole(m, a, b, r, seg) {
+    seg = seg || 5;
+    var d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], L = Math.hypot(d[0], d[1], d[2]) || 1; d = [d[0] / L, d[1] / L, d[2] / L];
+    var up = Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+    var u = [d[1] * up[2] - d[2] * up[1], d[2] * up[0] - d[0] * up[2], d[0] * up[1] - d[1] * up[0]], ul = Math.hypot(u[0], u[1], u[2]); u = [u[0] / ul, u[1] / ul, u[2] / ul];
+    var v = [d[1] * u[2] - d[2] * u[1], d[2] * u[0] - d[0] * u[2], d[0] * u[1] - d[1] * u[0]];
+    var ring = function (c, k) { var t = k / seg * Math.PI * 2, cs = Math.cos(t) * r, sn = Math.sin(t) * r; return [c[0] + u[0] * cs + v[0] * sn, c[1] + u[1] * cs + v[1] * sn, c[2] + u[2] * cs + v[2] * sn]; };
+    for (var k = 0; k < seg; k++) mQuad(m, ring(a, k), ring(a, k + 1), ring(b, k + 1), ring(b, k), 0.3, L / 0.6);
+  }
+  PROC.cp_leanto = function () {
+    var R = 1.3, Z0 = 0.35, ZB = -1.35, W = 1.25;   // the ridge's height and place, where the roof meets the ground, half the width
+    var rnd = function (i) { var x = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return x - Math.floor(x); };
+    var roofY = function (z) { return R * (z - ZB) / (Z0 - ZB); };
+    return [
+      // the frame: forked uprights, the ridge pole, rafters to the ground, a few cross-ties
+      pp(function (m) {
+        [-W, W].forEach(function (x) {
+          mPole(m, [x, 0, Z0], [x, R + 0.05, Z0], 0.05);
+          mPole(m, [x, R - 0.02, Z0], [x - 0.12 * Math.sign(x), R + 0.22, Z0 + 0.04], 0.03);
+          mPole(m, [x, R - 0.02, Z0], [x + 0.1 * Math.sign(x), R + 0.2, Z0 - 0.05], 0.03);
+        });
+        mPole(m, [-W - 0.25, R + 0.04, Z0], [W + 0.25, R + 0.04, Z0], 0.045);
+        for (var i = 0; i < 7; i++) { var x = -W + i * (2 * W / 6) + (rnd(i) - 0.5) * 0.08; mPole(m, [x, R + 0.06, Z0 + 0.12], [x + (rnd(i + 9) - 0.5) * 0.1, -0.02, ZB - 0.1], 0.03, 4); }
+        mPole(m, [-W - 0.1, roofY(-0.5) + 0.06, -0.5], [W + 0.1, roofY(-0.5) + 0.06, -0.5], 0.025, 4);
+      }, 't_bark', [0.62, 0.52, 0.4]),
+      // cut boughs laid over the rafters, row on row, ragged at the edges; and a few stood against each end
+      pp(function (m) {
+        for (var row = 0; row < 7; row++) {
+          var z1 = Z0 + 0.15 - row * 0.27, z0 = z1 - 0.36;
+          for (var c = 0; c < 5; c++) {
+            var i = row * 5 + c, x0 = -W - 0.2 + c * 0.55 + (rnd(i) - 0.5) * 0.18, x1 = x0 + 0.62 + rnd(i + 3) * 0.2, j = 0.06 + rnd(i + 7) * 0.05;
+            mQuad(m, [x0, roofY(z0) + j, z0], [x1, roofY(z0) + j, z0], [x1 + 0.05, roofY(z1) + j + 0.05, z1], [x0 - 0.05, roofY(z1) + j + 0.05, z1], 1, 1);
+          }
+        }
+        [-W - 0.05, W + 0.05].forEach(function (x, s) {
+          for (var k = 0; k < 4; k++) { var z = ZB + 0.25 + k * 0.4, top = roofY(z) + 0.05; mQuad(m, [x, 0, z - 0.22], [x, 0, z + 0.22], [x, top, z + 0.05], [x, top, z - 0.05], 1, 1); }
+        });
+      }, null, [0.24, 0.31, 0.17]),
+      pp(function (m) {   // older boughs, browned, under and between the fresh ones
+        for (var row = 0; row < 6; row++) { var z1 = Z0 - row * 0.3, z0 = z1 - 0.3; mQuad(m, [-W - 0.15, roofY(z0) + 0.04, z0], [W + 0.15, roofY(z0) + 0.04, z0], [W + 0.15, roofY(z1) + 0.04, z1], [-W - 0.15, roofY(z1) + 0.04, z1], 1, 1); }
+      }, null, [0.33, 0.27, 0.16]),
+      // the greatcoat, thrown over the left of the roof, its skirt hanging over the ridge at the front
+      pp(function (m) {
+        var x0 = -W + 0.05, x1 = -0.05, za = Z0 + 0.05, zb = ZB + 0.55;
+        mQuad(m, [x0, roofY(zb) + 0.14, zb], [x1, roofY(zb) + 0.16, zb], [x1, roofY(za) + 0.16, za], [x0, roofY(za) + 0.14, za], 1, 1);
+        mQuad(m, [x0, roofY(za) + 0.14, za], [x1, roofY(za) + 0.16, za], [x1 + 0.04, R - 0.45, Z0 + 0.32], [x0 - 0.04, R - 0.5, Z0 + 0.3], 1, 1);
+        mPole(m, [x0 + 0.12, R + 0.12, Z0 + 0.12], [x0 + 0.5, R - 0.2, Z0 + 0.34], 0.07, 5);   // a sleeve
+      }, 't_canvas', [0.42, 0.42, 0.4]),
+      // leaf litter to lie on, under the roof
+      pp(function (m) { mQuad(m, [-W + 0.1, 0.02, ZB + 0.3], [W - 0.1, 0.02, ZB + 0.3], [W - 0.15, 0.03, Z0 + 0.15], [-W + 0.15, 0.03, Z0 + 0.15], 1, 1); }, null, [0.36, 0.26, 0.14])
+    ];
+  };
+  // ── V183: phones and a shareable copy ──────────────────────────────────────────────────────────────
+  // On a touch screen the help line speaks of taps, key hints go, and below 600px the ledger folds into
+  // two thin rows so the story starts under the 3D view, not a screen further down. window.PT_SHARE
+  // (set only in the copy made for other players) keeps the developer tools out of reach.
+  (function () {
+    var touch = false;
+    try { touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window; } catch (e) {}
+    var css = document.createElement('style');
+    css.textContent =
+      'body.ptouch kbd, body.ptouch .kb { display: none !important; }' +
+      '.actions.col .btn { box-sizing: border-box; }' +
+      'html.ptshare #ldev, html.ptshare #devt, html.ptshare .setrow:has(#devt) { display: none !important; }' +
+      '@media (max-width: 600px) {' +
+      ' .ledger { padding: 6px 10px 6px !important; }' +
+      ' .vitals { display: flex !important; flex-wrap: wrap; gap: 2px 12px !important; }' +
+      ' .vital { font-size: 10px !important; letter-spacing: .03em !important; }' +
+      ' .vital .bar { display: none !important; }' +
+      ' .vital .row { justify-content: flex-start !important; gap: 4px !important; }' +
+      ' .vital .row span img.vi { width: 10px; height: 10px; margin-right: 2px; }' +
+      ' .ledger { position: relative; }' +
+      ' .stamps { position: absolute; right: 10px; top: 22px; margin: 0 !important; font-size: 10px !important; }' +
+      ' .stamps .stamp { display: none !important; }' +
+      ' .satchel { flex-wrap: nowrap !important; overflow-x: auto; gap: 4px !important; margin-top: 4px !important; scrollbar-width: none; }' +
+      ' .satchel .tool { flex: none; border-width: 4px !important; padding: 5px 7px !important; font-size: 10px !important; letter-spacing: .03em !important; white-space: nowrap; }' +
+      ' .actions.wback { margin: 4px 0 !important; }' +
+      ' .actions.wback .btn { padding: 6px 12px !important; font-size: 11px !important; }' +
+      ' #whelp { font-size: 9px !important; letter-spacing: .04em !important; padding: 3px 6px !important; max-width: calc(100vw - 110px); }' +
+      ' #wstopbox { max-height: 40vh !important; font-size: 14px; }' +
+      '}';
+    document.head.appendChild(css);
+    if (window.PT_SHARE) {
+      document.documentElement.classList.add('ptshare');
+      DEV = false; setDev = function () { DEV = false; };
+    }
+    if (!touch) return;
+    document.body.classList.add('ptouch');
+    var help = document.getElementById('whelp');
+    if (help) help.textContent = 'Tap to walk · tap twice to run · pinch to zoom';
+    // " · Esc" on buttons means nothing without a keyboard
+    function strip(root) {
+      var tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), n, hit = [];
+      while ((n = tw.nextNode())) if (/ · Esc\b/.test(n.nodeValue)) hit.push(n);
+      hit.forEach(function (t) { t.nodeValue = t.nodeValue.replace(/ · Esc\b/g, ''); });
+    }
+    strip(document.body);
+    try {
+      new MutationObserver(function (ms) {
+        for (var i = 0; i < ms.length; i++) {
+          var m = ms[i];
+          if (m.type === 'characterData') { if (/ · Esc\b/.test(m.target.nodeValue)) m.target.nodeValue = m.target.nodeValue.replace(/ · Esc\b/g, ''); }
+          else for (var j = 0; j < m.addedNodes.length; j++) { var a = m.addedNodes[j]; if (a.nodeType === 1) strip(a); else if (a.nodeType === 3 && / · Esc\b/.test(a.nodeValue)) a.nodeValue = a.nodeValue.replace(/ · Esc\b/g, ''); }
+        }
+      }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    } catch (e) {}
+  })();
+
+  // ===================================================================================================
+  // V184: THE FERRY HOUSE AT GREYWATER FORD. Ansgar's house by the water (hp_house9) stands on a plinth 1.72 m high with
+  // a porch and a stair on its river side. The stair and the porch can now be walked: a corridor of walls round them, so
+  // you go up by the stair and nowhere else, and the floor lifts you as you climb (LAYOUT.ford.lifts, a list both builds
+  // read). The door on the porch opens on the room inside: the bridge gang's billet. Lime plaster and the same red trim
+  // as the walls outside; no hearth, because the house has no chimney. Two long tables with men at them, the
+  // bridgemaster over a map at the back, a man on the door, Ansgar's coat on the last peg, the toll on a shelf.
+  // ===================================================================================================
+  // raised floors as data: flat {x0,x1,z0,z1,y}; a slope {.., ramp: 'z-'|'z+'|'x-'|'x+'} (rising toward that side to y);
+  // a hump {.., edge, along: 'z'|'x'} (y in the middle, falling to 0 over `edge` at both ends). The highest one wins.
+  function liftAt(list, x, z) {
+    var y = 0;
+    for (var i = 0; i < (list || []).length; i++) {
+      var q = list[i]; if (!(x > q.x0 && x < q.x1 && z > q.z0 && z < q.z1)) continue;
+      var h = q.y;
+      if (q.ramp) {
+        var f = q.ramp === 'z-' ? (q.z1 - z) / (q.z1 - q.z0) : q.ramp === 'z+' ? (z - q.z0) / (q.z1 - q.z0) : q.ramp === 'x-' ? (q.x1 - x) / (q.x1 - q.x0) : (x - q.x0) / (q.x1 - q.x0);
+        h = q.y * Math.max(0, Math.min(1, f));
+      } else if (q.edge) { var e = q.along === 'x' ? Math.min(x - q.x0, q.x1 - x) : Math.min(z - q.z0, q.z1 - z); h = q.y * Math.min(1, e / q.edge); }
+      if (h > y) y = h;
+    }
+    return y;
+  }
+  (function () {
+    var L = LAYOUT.ford, PORCH = 1.72;
+    // the bridge deck and the weir stones as before, now written as data; then the porch and its stair
+    L.lifts = [
+      { x0: 3.65, x1: 8.35, z0: -9.6, z1: 3.0, y: 0.7, edge: 1.4, along: 'z' },
+      { x0: -8.6, x1: -6.6, z0: -6.4, z1: 1.4, y: 0.1 },
+      { x0: -9.75, x1: -7.9, z0: 6.9, z1: 9.03, y: PORCH },
+      { x0: -9.75, x1: -7.9, z0: 9.03, z1: 10.75, y: PORCH, ramp: 'z-' }
+    ];
+    L.liftTop = PORCH;
+    L.lift = function (x, z) { return liftAt(L.lifts, x, z); };
+    // the house was one box from the stall to the bush; now the house, and the porch's front and river side, so the
+    // only way up is the stair, and the only way down from the porch is the stair
+    L.solid = L.solid.filter(function (q) { return !(q.x0 === -17 && q.x1 === -8 && q.z0 === 5.6 && q.z1 === 13.6); }).concat([
+      { x0: -16.9, x1: -9.55, z0: 6.8, z1: 12.45 },
+      { x0: -9.75, x1: -7.8, z0: 6.75, z1: 7.15, wall: 1 },
+      { x0: -8.1, x1: -7.8, z0: 6.75, z1: 10.46, wall: 1 }
+    ]);
+    L.doors = [{ name: 'The ferry house', note: 'Where the bridge gang sleep', x: -9.63, z: 7.88, ax: -8.85, az: 7.88, to: 'ferryhouse', at: [2.85, -1.9], face: -HALF, hy: 3.4 }];
+
+    // ---- the room (x -3.6..3.6, z -2.7..2.7: the house's own walls, a little more than seven paces by five)
+    PROC.fh_room = function () {
+      var X = 3.6, Z = 2.7, T = 0.15, H = 3.2, LOW = 0.9, D0 = -2.5, D1 = -1.3;
+      return [
+        pp(function (m) {
+          mBox(m, -X - T, 0, -Z - T, X + T, H, -Z, 1.6);
+          mBox(m, -X - T, 0, -Z, -X, H, Z + T, 1.6);
+          mBox(m, X, 0, -Z, X + T, LOW, D0, 1.6); mBox(m, X, 0, D1, X + T, LOW, Z + T, 1.6);
+          mBox(m, -X, 0, Z, X, LOW, Z + T, 1.6);
+        }, 'LimeWall_Diffuse.png@128', HOUSE),
+        pp(function (m) {
+          // posts at the corners and halfway along the two tall walls, the wall plate under the eaves, the skirting
+          [[-X, -Z], [0, -Z], [X, -Z], [-X, 0]].forEach(function (p) { mBox(m, p[0] - 0.11, 0, p[1] - 0.11, p[0] + 0.11, H + 0.02, p[1] + 0.11, 0.8); });
+          [[-X, Z], [X, Z], [X, 0.6]].forEach(function (p) { mBox(m, p[0] - 0.11, 0, p[1] - 0.11, p[0] + 0.11, LOW + 0.08, p[1] + 0.11, 0.8); });
+          mBox(m, -X - 0.02, H - 0.24, -Z, X + 0.02, H, -Z + 0.13, 0.8); mBox(m, -X, H - 0.24, -Z, -X + 0.13, H, Z, 0.8);
+          mBox(m, -X, 0, -Z, X, 0.16, -Z + 0.04, 0.8); mBox(m, -X, 0, -Z, -X + 0.04, 0.16, Z, 0.8);
+          // a rail at shoulder height for the pegs, along the back wall
+          mBox(m, -0.2, 1.62, -Z, 2.9, 1.74, -Z + 0.07, 0.8);
+          // the door: posts, a lintel stub over the low wall, a sill; window sills on the front wall, where the windows are outside
+          mBox(m, X - 0.04, 0, D0 - 0.14, X + T + 0.05, LOW + 0.12, D0, 0.8); mBox(m, X - 0.04, 0, D1, X + T + 0.05, LOW + 0.12, D1 + 0.14, 0.8);
+          mBox(m, X - 0.02, 0, D0, X + T + 0.02, 0.05, D1, 0.8);
+          mBox(m, X - 0.02, LOW, -Z, X + T + 0.02, LOW + 0.06, D0, 0.8); mBox(m, X - 0.02, LOW, D1, X + T + 0.02, LOW + 0.06, Z, 0.8);
+          mBox(m, -X, LOW, Z - 0.02, X, LOW + 0.06, Z + T + 0.02, 0.8);
+          [-1.0, 1.0].forEach(function (x) { mBox(m, x - 0.75, LOW + 0.06, Z - 0.1, x + 0.75, LOW + 0.12, Z + T + 0.06, 0.8); });
+        }, 'WoodTrim_Diffuse.png@128', HOUSE)
+      ];
+    };
+    // the pegs: the gang's coats on four, and on the last, by itself, a ferryman's oilskin and his boat-hook
+    PROC.fh_pegs = function () {
+      var out = [pp(function (m) { for (var i = 0; i < 5; i++) mBox(m, -1.4 + i * 0.62 - 0.03, 0, -0.02, -1.4 + i * 0.62 + 0.03, 0.05, 0.16, 0.3); }, null, [0.3, 0.22, 0.15])];
+      // three green coats hung by the collar
+      out.push(pp(function (m) {
+        [-1.4, -0.78, -0.16].forEach(function (x, i) { var w = 0.24 + i * 0.02; mQuad(m, [x - w, -1.0, 0.06], [x + w, -1.0, 0.06], [x + 0.12, 0.02, 0.1], [x - 0.12, 0.02, 0.1], 1, 1); mQuad(m, [x - w, -1.0, 0.13], [x - 0.12, 0.02, 0.16], [x + 0.12, 0.02, 0.16], [x + w, -1.0, 0.13], 1, 1); });
+      }, 't_canvas', [0.2, 0.27, 0.19]));
+      // Ansgar's oilskin: longer, stiffer, darker, on the last peg
+      out.push(pp(function (m) {
+        var x = 1.08;
+        mQuad(m, [x - 0.3, -1.38, 0.05], [x + 0.3, -1.38, 0.05], [x + 0.13, 0.02, 0.1], [x - 0.13, 0.02, 0.1], 1, 1);
+        mQuad(m, [x - 0.3, -1.38, 0.15], [x - 0.13, 0.02, 0.17], [x + 0.13, 0.02, 0.17], [x + 0.3, -1.38, 0.15], 1, 1);
+        mBox(m, x - 0.17, -0.18, 0.03, x + 0.17, 0.0, 0.19, 0.3);
+      }, 't_canvas', [0.16, 0.15, 0.1]));
+      // the boat-hook, stood against the wall beside it
+      out.push(pp(function (m) { mPole(m, [1.55, -1.72, 0.12], [1.48, 0.55, 0.07], 0.022, 5); }, 't_bark', [0.6, 0.48, 0.34]));
+      out.push(pp(function (m) { mPole(m, [1.48, 0.55, 0.07], [1.47, 0.72, 0.07], 0.018, 4); mPole(m, [1.48, 0.62, 0.07], [1.36, 0.66, 0.07], 0.014, 4); }, null, [0.18, 0.18, 0.19]));
+      return out;
+    };
+    // the toll: rations tied up in string, each with a paper tag, kept on the shelf and never eaten
+    PROC.fh_tolls = function () {
+      var rnd = function (i) { var x = Math.sin(i * 12.9898 + 7.3) * 43758.5453; return x - Math.floor(x); };
+      var bun = [], tags = [];
+      [0.02, 0.62, 1.22].forEach(function (y, s) {
+        for (var i = 0; i < 4; i++) {
+          var k = s * 4 + i; if (k === 6) continue;
+          var x = -0.42 + i * 0.27 + (rnd(k) - 0.5) * 0.05, w = 0.08 + rnd(k + 3) * 0.04, h = 0.08 + rnd(k + 5) * 0.08, d = 0.1 + rnd(k + 7) * 0.05;
+          bun.push([x - w, y, -d, x + w, y + h, d]); tags.push([x + w - 0.01, y + h * 0.6, d]);
+        }
+      });
+      return [
+        pp(function (m) { bun.forEach(function (b) { mBox(m, b[0], b[1], b[2], b[3], b[4], b[5], 0.3); }); }, 't_canvas', [0.62, 0.56, 0.44]),
+        pp(function (m) { tags.forEach(function (t) { mQuad(m, [t[0], t[1] - 0.05, t[2] + 0.01], [t[0] + 0.07, t[1] - 0.05, t[2] + 0.01], [t[0] + 0.07, t[1] + 0.01, t[2] + 0.01], [t[0], t[1] + 0.01, t[2] + 0.01], 1, 1); }); }, null, [0.86, 0.83, 0.74])
+      ];
+    };
+    // the map: a surveyor's sheet worn white along the folds, weighted with buttons, a pencil line along the river
+    PROC.fh_map = function () {
+      return [
+        pp(function (m) { mQuad(m, [-0.42, 0.005, 0.3], [0.42, 0.005, 0.3], [0.42, 0.005, -0.3], [-0.42, 0.005, -0.3], 1, 1); }, null, [0.78, 0.72, 0.58]),
+        pp(function (m) {
+          // the river, in blue-grey wash, across the sheet; the road, in brown; the fold lines
+          mQuad(m, [-0.42, 0.007, 0.02], [0.42, 0.007, -0.04], [0.42, 0.007, 0.02], [-0.42, 0.007, 0.08], 1, 1);
+        }, null, [0.42, 0.5, 0.56]),
+        pp(function (m) {
+          mQuad(m, [-0.02, 0.008, 0.3], [0.02, 0.008, 0.3], [0.03, 0.008, -0.3], [-0.01, 0.008, -0.3], 1, 1);
+          mQuad(m, [-0.42, 0.008, -0.11], [0.42, 0.008, -0.13], [0.42, 0.008, -0.12], [-0.42, 0.008, -0.1], 1, 1);
+          for (var i = 0; i < 7; i++) { var x = -0.34 + i * 0.1, z = -0.06 - (i % 2) * 0.02; mCyl(m, x, 0.008, z, 0.012, 0.012, 0.002, 6, 'y', 1, true); }
+        }, null, [0.3, 0.27, 0.22]),
+        pp(function (m) { [[-0.39, -0.27], [0.39, -0.27], [-0.39, 0.27], [0.39, 0.27], [0.05, 0.0]].forEach(function (b) { mCyl(m, b[0], 0.0, b[1], 0.025, 0.025, 0.012, 7, 'y', 1, true); }); }, null, [0.55, 0.55, 0.58])
+      ];
+    };
+    // three muskets stood in the corner, and a cartridge box
+    PROC.fh_arms = function () {
+      return [
+        pp(function (m) { [[-0.12, 0.0, -0.05], [0.04, 0.0, 0.02], [0.18, 0.0, -0.04]].forEach(function (b, i) { mBox(m, b[0] - 0.03, 0, b[2] - 0.045, b[0] + 0.03, 1.02, b[2] + 0.045, 0.4); }); }, 't_planks', [0.4, 0.27, 0.17]),
+        pp(function (m) { [[-0.12, -0.05, -0.14], [0.04, 0.02, -0.03], [0.18, -0.04, -0.12]].forEach(function (b) { mPole(m, [b[0], 0.95, b[1]], [b[0] + b[2] * 0.3, 1.52, b[1] - 0.12], 0.012, 4); }); }, null, [0.32, 0.33, 0.36]),
+        pp(function (m) { mBox(m, 0.32, 0, -0.1, 0.55, 0.16, 0.08, 0.3); }, null, [0.16, 0.12, 0.09])
+      ];
+    };
+    // playing cards, a few face up, a stack
+    PROC.fh_cards = function () {
+      return [pp(function (m) {
+        [[-0.12, 0.05, 0.3], [0.0, -0.06, -0.4], [0.14, 0.04, 0.9], [0.24, 0.02, 0.1]].forEach(function (c) {
+          var cs = Math.cos(c[2]) * 0.035, sn = Math.sin(c[2]) * 0.035, cs2 = Math.cos(c[2]) * 0.05, sn2 = Math.sin(c[2]) * 0.05;
+          mQuad(m, [c[0] - cs + sn2, 0.003, c[1] - sn - cs2], [c[0] + cs + sn2, 0.003, c[1] + sn - cs2], [c[0] + cs - sn2, 0.003, c[1] + sn + cs2], [c[0] - cs - sn2, 0.003, c[1] - sn + cs2], 1, 1);
+        });
+        mBox(m, -0.3, 0, -0.06, -0.23, 0.02, 0.04, 0.3);
+      }, null, [0.88, 0.86, 0.8])];
+    };
+
+    var rnd = function (i) { var x = Math.sin(i * 78.233 + 1.7) * 43758.5453; return x - Math.floor(x); };
+    L.areas = {
+      ferryhouse: {
+        props: function (add, id, marks, lights) {
+          add('fh_room', 0, 0, {});
+          // the two long tables, end to end down the middle, benches both sides
+          [[-1.15, 0.95], [1.35, 0.95]].forEach(function (t) {
+            add('f_table', t[0], t[1], { h: 0.8, sx: 1.3, sz: 1.3 }); add('f_bench', t[0], t[1] - 0.95, { h: 0.5, sx: 1.16, sz: 1.16 }); add('f_bench', t[0], t[1] + 0.95, { h: 0.5, sx: 1.16, sz: 1.16 });
+            add('lantern', t[0] + 0.35, t[1] - 0.15, { y: 0.8, s: 0.7 });
+          });
+          // on the tables: mugs, a bottle, bread on a plate, the cards
+          [[-1.75, 0.6], [-0.65, 0.62], [-1.25, 1.3], [1.0, 0.6], [1.75, 1.32]].forEach(function (q, i) { add('r_cooking_mug', q[0], q[1], { h: 0.15, y: 0.8, r: i * 1.3 }); });
+          add('r_bottle', -0.9, 1.05, { h: 0.3, y: 0.8 }); add('s_bottle', 1.55, 0.85, { h: 0.3, y: 0.8 }); add('r_cooking_plate', 0.85, 1.15, { h: 0.025, y: 0.8 });
+          add('fh_cards', -1.2, 0.9, { y: 0.8 });
+          // the bridgemaster's table at the back, the map on it, a candle each side
+          add('f_tablesq', -2.35, -1.45, { h: 0.85, sx: 1.21, sz: 1.21 }); add('fh_map', -2.35, -1.45, { y: 0.92 });
+          add('r_candle', -2.78, -1.12, { h: 0.3, y: 0.92 }); add('r_candle', -1.92, -1.78, { h: 0.3, y: 0.92 });
+          add('fh_arms', -3.3, -2.35, { r: 0.6 });
+          // the pegs and the toll shelf on the back wall
+          add('fh_pegs', 0.95, -2.66, { y: 1.68 });
+          add('f_shelf', 2.3, -2.42, { h: 1.9 }); add('fh_tolls', 2.3, -2.38, { y: 0.28 });
+          // a cot by the left wall, a barrel and a crate by the front, a pail by the door
+          add('r_cot', -3.12, 1.55, { h: 0.38, r: HALF }); add('f_barrel', 2.95, 2.05, { h: 1 }); add('mk_crate', 2.35, 2.25, { h: 0.7, r: 0.3 });
+          // light through the two front windows, falling back into the room
+          [-1.0, 1.0].forEach(function (x) {
+            lights.push({ x: x, z: 2.25, y: 0, w: 1.4, h: 3.2, tex: 'l_shaft', r: 0, rz: -0.35, c: SHAFT }, { x: x - 0.6, z: 1.1, flat: true, w: 1.8, d: 2.2, c: [0.14, 0.14, 0.16] });
+          });
+        },
+        spots: { bmaster: [-2.35, -2.12, { face: 0, noTurn: true, rgIdle: 'leanmap', ax: -1.55, az: -1.15, rgUni: { body: 'soldier_g', tex: 'blue', dim: 0.82, drop: ['Shako material', 'Havresac 01'], more: [] } }] },
+        ospots: {
+          map: [-2.35, -1.45, { ax: -1.5, az: -1.1, pr: 0.8, hy: 1.1 }],
+          peg: [1.03, -2.55, { ax: 1.0, az: -1.75, pr: 0.8, hy: 1.9 }],
+          tolls: [2.3, -2.42, { ax: 2.3, az: -1.65, pr: 0.8, hy: 1.7 }]
+        },
+        doors: [{ name: 'Out to the porch', note: 'And down the steps to the river', x: 3.6, z: -1.9, ax: 3.0, az: -1.9, at: [-8.85, 7.88], face: HALF, hy: 1.5 }],
+        grounds: [VOID, [-3.6, -2.7, 3.6, 2.7, 1.8, 0.02, 'WoodPlankFloor_Diffuse.png@128', HOUSE], [-0.6, -1.9, 1.2, -0.6, 2, 0.04, 't_rug2', [0.6, 0.62, 0.5]]],
+        solid: [
+          { x0: -2.25, x1: -0.05, z0: -0.2, z1: 2.15 }, { x0: 0.25, x1: 2.45, z0: -0.2, z1: 2.15 },
+          { x0: -2.95, x1: -1.75, z0: -2.05, z1: -0.85 }, { x0: -3.6, x1: -2.95, z0: -2.7, z1: -1.9 },
+          { x0: 1.65, x1: 2.95, z0: -2.7, z1: -2.05 }, { x0: -3.6, x1: -2.7, z0: 0.6, z1: 2.5 },
+          { x0: 2.0, x1: 3.5, z0: 1.6, z1: 2.7 }, { x0: -0.3, x1: 1.65, z0: -2.7, z1: -2.45 }
+        ],
+        extras: [],
+        bounds: [-3.3, -2.35, 3.35, 2.42], start: [2.85, -1.9], exit: [5, -1.9], zoom: 4.8, camOff: [-0.3, -0.8],
+        fog: WARM, fogR: [12, 26], light: [0.3, 0.5, 0.22],
+        barks: {
+          bmaster: [{ text: '“Shut it properly, courier. The river gets in.”' }],
+          x_map: [{ v: 'cipher', min: 1, text: 'Rings along the far bank, the same hand as the toll slate. He is counting something that is not money.' }],
+          x_peg: [{ v: 'trace', min: 1, text: 'Every peg on that rail has a coat on it except one, and that one has the wrong coat.' }]
+        }
+      }
+    };
+    // who sits where: five of the gang at the tables (the Crown's blue they walked off in, and the faded green), a man on the door
+    var SEATS = [
+      // [x, z, face, want, blue?]
+      [-1.75, 0.15, 0, 'sitcards', false], [-0.6, 0.15, 0, 'sitdrink', true], [-1.2, 1.75, Math.PI, 'sitcards', false],
+      [1.0, 0.15, 0, 'sitlaugh', false], [1.8, 1.75, Math.PI, 'sittalk', true]
+    ];
+    function fhGang(i, blue) {
+      if (blue) return { body: 'soldier_g', tex: 'blue', drop: ['Shako material', 'Havresac 01'], dim: 0.9, more: i % 2 ? [['cap', [0.12, 0.15, 0.24]]] : [] };
+      return { body: i % 2 ? 'soldier' : 'soldier_g', tex: 'green', drop: ['Shako material', 'Havresac 01'], dim: 0.85, more: i % 3 ? [['cap', [0.15, 0.18, 0.14]], ['capband', [0.42, 0.36, 0.2]]] : [['hat', [0.2, 0.17, 0.13]]] };
+    }
+    var _wbV184 = wBuild;
+    wBuild = function (id, L0) {
+      var sc = _wbV184(id, L0);
+      try {
+        if (L0 === LAYOUT.ford && !W.areas[id]) { sc.liftTop = L0.liftTop; }
+        if (L0 === LAYOUT.ford && W.areas[id] === 'ferryhouse') {
+          SEATS.forEach(function (q, i) { sc.extras.push({ x: q[0], z: q[1], face: q[2], sit: true, want: q[3], noTurn: true, gang: true, rgUni: fhGang(i + 1, q[4]) }); });
+          sc.extras.push({ x: -3.28, z: -0.25, face: HALF, want: 'idlelean', noTurn: true, gang: true, rgUni: fhGang(6, true) }); sc.solid.push({ x: -3.28, z: -0.25, r: 0.3 });
+          var g = { x: 3.05, z: -0.72, face: -2.3, want: 'guard', noTurn: true, gang: true, rgUni: fhGang(7, false), rgWpn: 'musket' };
+          sc.extras.push(g); sc.solid.push({ x: g.x, z: g.z, r: 0.33 });
+        }
+      } catch (e) { setTimeout(function () { throw e; }); }
+      return sc;
+    };
+    TALK.ford.push({ id: 'bmaster', name: 'The bridgemaster', role: 'Over a map in the ferry house', hue: '95deg', mood: 'think', opts: [],
+      when: function () { return !!(typeof W !== 'undefined' && W.areas && W.areas.ford === 'ferryhouse'); } });
+    var inHouse = function () { return !!(typeof W !== 'undefined' && W.areas && W.areas.ford === 'ferryhouse'); };
+    OBJECTS.ford.push(
+      { id: 'map', name: 'The bridgemaster’s map', blurb: 'A surveyor’s sheet, weighted with buttons', show: inHouse },
+      { id: 'peg', name: 'The last peg', blurb: 'An oilskin coat and a boat-hook', show: inHouse },
+      { id: 'tolls', name: 'The toll shelf', blurb: 'Rations tied in string, each with a tag', show: inHouse }
+    );
+  })();
+
   // <pt-dialogue> conversations compiled from dialogue/*.pt by tools/compile.js: edit the scripts, not this block
   // Generated by tools/compile.js from dialogue/*.pt. Do not edit; edit the scripts and recompile.
   // Paste inside the game script after the last GRAPH patch (or load it there), so it replaces those entries.
@@ -29928,6 +30269,10 @@ function ldMakePostal(o) { return o && o.on ? ldSetup(o, [ldDie('Left die', LD_S
   GRAPH["ford:x_rope"] = { "hub": "hub", "nodes": { "hub": { "voices": [{ "v": "mud", "min": 1, "q": "“Carries it where?”", "go": "v_mud", "no": "“No.”", "text": "Look how easily it lies in the current. Nobody pulls on it any more, and it does not mind. Let go of a thing long enough and the river carries it for you." }, { "v": "wire", "min": 1, "text": "ROPE STOPS DEAD IN MIDSTREAM. NO FRAYING AT THE END. STOP." }, { "v": "cipher", "min": 2, "text": "A rope that parts in a flood frays at the break. A clean end means a knife. Haul it in and look." }, { "v": "ledger", "max": 1, "text": "Good tarred hemp, sixty yards of it. Worth a ration a yard to anyone downstream with a boat. Nobody has taken it. Interesting." }], "opts": [{ "q": "Haul the loose end in, hand over hand, and look at it.", "check": { "sk": "wits", "dc": 7, "pass": "cut_ok", "fail": "cut_bad" } }, { "q": "Leave the rope to the river." }], "say": ["An iron ring is sunk in a post at the water’s edge, and from it the ferry rope runs down into the river and away, a long tarred snake pulled straight by the current. Out in midstream it simply stops. On the far bank, under the nearer redoubt, its other half hangs from a twin post like a dropped hand."] }, "v_mud": { "by": "mud", "opts": [{ "to": "<", "q": "Take your hand off the ring." }, { "to": "<", "q": "Sit on the post with your feet in the river. Only a minute.", "temp": ["grit", -1, "the river’s cold is in your legs"], "fx": { "hrs": 1, "st": 1 } }], "say": ["Down past the bend, into the reeds, and then nowhere. Sit on the post a while. Put your feet in. The water is cold for the first minute, and then it is not anything at all."] }, "cut_ok": { "flag": "ford_rope", "learn": "The ferry rope was cut with one axe stroke from the far bank, under the redoubt, not torn by the flood.", "voices": [{ "v": "duty", "text": "Denying a crossing to the enemy. Correct, and properly done: one stroke. Somebody over there knows his business." }, { "v": "hat", "text": "And denying a ferryman’s family their living, in the same stroke. Both at once, gunner. It usually is both at once." }, { "v": "longroad", "min": 1, "text": "The boy on the shingle did not watch you haul. He was watching the far post. Now you know why." }], "opts": [{ "to": "hub", "q": "Let it slide back into the river." }], "say": ["It comes in heavy and streaming, and the last yard of it is as clean as a loaf. No fraying, no stretched strands: one stroke, slanted, the way an axe bites when the man swinging it stands above the rope and to the right. Somebody on the far bank, under the redoubt, cut the valley’s ferry with a single blow."] }, "cut_bad": { "fx": { "st": -1 }, "voices": [{ "v": "splinter", "min": -9, "text": "That was the river telling you its weight. Remember the number when you wade." }], "opts": [{ "to": "hub", "q": "Shake out your hands." }], "say": ["The rope comes in heavier than it looks, and the current takes the slack back faster than you can gather it. The tar burns your palms, your bad shoulder locks, and you let go before it takes you with it. The loose end goes back into the river, unread."] } } };
   GRAPH["ford:x_slate"] = { "hub": "hub", "nodes": { "hub": { "voices": [{ "v": "cipher", "min": 1, "q": "“What does it record?”", "go": "v_cipher", "text": "Strokes, hooks and rings, and the rings outnumber the rest four to one. A toll-board that never records money. Look at what it does record." }, { "v": "hat", "text": "A bridgemaster’s hand. Neat, upright, a little vain. He used to count carts for the Crown and sign at the bottom." }, { "v": "duty", "min": 1, "text": "Deserters keeping accounts on the Crown’s bridge. They have even kept the form." }], "opts": [{ "q": "Read the columns properly, under the sentry’s eye.", "check": { "sk": "wits", "dc": 8, "pass": "read_ok", "fail": "read_bad" } }, { "q": "Leave the slate on its nail." }], "say": ["A school slate in a wooden frame hangs from a nail on the bridge-post, a stub of chalk tied to it on a string. Three columns in a careful, upright hand: a stroke for a ration, a little hook for a story, and a third column of small rings, many more of them than the other two together. There is no column for coin."] }, "v_cipher": { "by": "cipher", "opts": [{ "to": "<", "q": "Look for the small words.", "temp": ["wits", 1, "the rings are zeros"] }, { "to": "<", "q": "It is a tally. Nothing more." }], "say": ["Rings are nothing. Zeros. Somebody crosses, and the bridge writes down that it took nothing from them, every time, in its best hand. A toll-keeper who records his own generosity is either a saint or keeping evidence. Read the small words beside each mark and you will know which."] }, "read_ok": { "flag": "ford_slate", "learn": "The bridge gang charges only soldiers and strangers; valley folk cross free, and the slate records every free crossing.", "voices": [{ "v": "hat", "text": "Evidence, then. For the day somebody comes with a rope and asks what they did here. They want it written that they did this." }, { "v": "ledger", "min": 1, "text": "Three soldiers a week against forty of the valley. They are not making a living off this bridge. They are making an alibi." }, { "v": "trace", "min": 1, "text": "The valley knows exactly what this slate says. It is why the bridge still stands." }], "opts": [{ "to": "hub", "q": "Step back from the post." }], "say": ["Beside each stroke and hook, in the same small hand, a word: tinker, priest, drover, soldier, soldier, soldier. Beside the rings: bargewoman, the miller’s girl, two carters, the ferry boy, the ferry boy, the ferry boy. The bridge charges soldiers and strangers. The valley crosses free, and the bridge writes it down so that nobody can say later that it did not."] }, "read_bad": { "temp": ["nerve", -1, "caught reading the bridge’s book"], "fx": { "notice": 1 }, "voices": [{ "v": "splinter", "min": -9, "text": "A pinch, a breath too late. You were reading with your back to a man with a rifle." }], "opts": [{ "to": "hub", "q": "Step back." }], "say": ["You lean in to read and a shadow falls across the slate. Pim is at your shoulder, chewing. “That is the bridge’s book,” he says mildly, and turns the slate to face the post. “You can pay the toll without reading the accounts.”"] } } };
   GRAPH["ford:x_redoubts"] = { "hub": "hub", "nodes": { "hub": { "voices": [{ "v": "ringing", "q": "“I know it.”", "go": "v_ringing", "no": "“Not now.”", "text": "Earth thrown up in a hurry, a gun’s mouth in a notch, open ground running down in front. You know this shape. It knows you." }, { "v": "duty", "text": "There. The first men in a week who are still holding something. Look at them, and stand up straighter." }, { "v": "ledger", "min": 1, "text": "Two works, one lantern. Either they are short of oil, or short of men to tend a second." }, { "v": "hat", "text": "Earthworks. I have seen what earthworks are worth when the other side brings better guns. Do not tell them." }], "opts": [{ "q": "Read the works the way a gunner reads them: slowly, from the left.", "check": { "sk": "grit", "dc": 7, "pass": "look_ok", "fail": "look_bad" } }, { "q": "Look away from the far bank." }], "say": ["Across the brown water the far bank rises in two raw earthworks, Six and Seven, their faces cut square and revetted with wicker, the embrasures dark as missing teeth. A single lantern burns on the parapet of Six in broad day, as if somebody had forgotten to put it out, or did not dare."] }, "v_ringing": { "by": "ringing", "opts": [{ "to": "<", "q": "It is a river, not a meadow. Breathe.", "temp": ["grit", 1, "you named it and it passed"] }, { "to": "look_bad", "q": "Let it come." }], "say": function () { return [((pastN() >= 1) ? "Patience in her notch. Crane’s pipe upside down against the rain. The meadow green all the way to the enemy. Then the clay, all of it, everywhere." : "A notch in the earth, a gun in the notch, a crew behind the gun. Then the earth again, all of it, everywhere.")]; } }, "look_ok": { "learn": "Redoubt Seven has no guns; Ostrey holds two works with the guns for one, and a coat on a stick in the empty one.", "voices": [{ "v": "duty", "text": "Then he is holding anyway. Two works, one battery, and a scarecrow. I would follow that man." }, { "v": "hat", "text": "A coat on a stick. Every pass I ever held had one. Usually it was me." }, { "v": "ledger", "min": 1, "text": "Laid on the bridge, not on the far road. Ostrey trusts the deserters on his doorstep less than the rebels over the hill." }], "opts": [{ "to": "hub", "q": "Look away." }], "say": ["You read it as you were taught, embrasure by embrasure. Six has two guns, old bronze, laid low on the river and the bridge. Seven has embrasures and nothing behind them: a lantern pole, and a coat on a stick wearing a levy cap. Somebody over there is holding two redoubts with the guns for one, and has dressed a scarecrow to make up the difference."] }, "look_bad": { "fx": { "st": -1 }, "voices": [{ "v": "ringing", "min": -9, "text": "There. You see. It does not need a meadow." }, { "v": "mud", "min": 1, "text": "Stay sitting. The shingle is warm on top. Nobody on either bank will mind." }], "opts": [{ "to": "hub", "q": "Get up." }], "say": ["You start at the left embrasure and lose your place at the second. The earth is too new and too square, and the ground in front of it runs down to the water at the wrong angle, and the ringing comes up out of the river like a man surfacing. When it passes you are sitting on the shingle with one hand in the shallows. The boy is watching you from the alder roots, and does not look away when you see him."] } } };
+  GRAPH["ford:bmaster"] = { "hub": "hub", "nodes": { "hub": { "mood": "think", "voices": [{ "v": "wire", "min": 1, "show": function () { return !(S.done.gmet_ford_bmaster); }, "text": "PIM ON THE BRIDGE. THIS MAN IN THE HOUSE. TOLL GOES OUT THERE. ORDERS COME FROM IN HERE. STOP." }, { "v": "parade", "min": 1, "text": "Sergeant’s stripes, unpicked. You can see where they were by the cleaner cloth. He has kept the posture, and the posture has kept him." }, { "v": "ledger", "min": 1, "text": "Every man at those tables has a mug in front of him and not one has a coin out. Somebody in this room keeps the money by never letting it be seen." }, { "sk": "nerve", "max": 0, "text": "The man on the door watched you come in. The man at the map did not need to." }, { "v": "hat", "text": "A bridgemaster who stays indoors, gunner. He has learned that a bridge is run from the bank." }], "opts": [{ "to": "runs", "q": "“Pim says the bridge is his.”", "once": true }, { "to": "map", "q": "“What are you marking on that map?”", "once": true }, { "show": function () { return S.done.ford_slate; }, "to": "slate", "q": "“The rings on the slate. Free crossings, for the valley.”", "once": true }, { "show": function () { return S.done.ford_ansgar_coat; }, "to": "ansgar", "q": "“That is Ansgar’s coat on the last peg.”", "once": true }, { "show": function () { return S.done.ford_bm_route; }, "to": "route", "q": "“You have drawn a line north, over the hill.”", "once": true }, { "q": "Leave him to his map." }], "say": function () { return (!(S.done.gmet_ford_bmaster) ? ["At the back of the room a man in a Crown coat stands over a map with his weight on his knuckles. The facings have been unpicked from his cuffs and the cloth underneath is a darker blue, like the place on a wall where a picture used to hang. A candle burns at each end of the table. He does not look up when the door opens. He looks up when it closes.", "“Courier,” he says, as though he has found the word on the map. “Shut that properly. The river gets in.”"] : ["The bridgemaster has not moved from the map. He moves a pewter button half an inch along the river and looks at it from the side, the way a man looks at a shot he is not sure of. “Courier. Ask.”"]); } }, "runs": { "mood": "calm", "learn": "The bridgemaster runs the bridge from the ferry house; Pim stands on the span and does the talking.", "voices": [{ "sk": "nerve", "min": 1, "text": "He has not raised his voice once. Men who never raise their voices have usually been obeyed for a long time." }, { "v": "bluff", "min": 1, "text": "He gave you the truth because it costs him nothing. Pim on the span is the face the Crown would hang. He has arranged that." }], "opts": [{ "to": "hub", "q": "Go back." }], "say": ["“Pim talks. Pim is good at talking; it is why he has the bridge.” He does not look up. “I count. Somebody has to count, or a toll is only a robbery with manners.”"] }, "map": { "mood": "think", "flag": "ford_bm_map", "learn": "The bridgemaster in the ferry house keeps a map of the Crown’s patrols; the deserters mean to be gone before the dragoons come.", "voices": [{ "v": "cipher", "min": 1, "q": "“Read it upside down.”", "go": "v_cipher", "no": "“Not while he is looking.”", "text": "He keeps his left hand flat on the top corner of the sheet. Whatever is under the hand is the part that matters." }, { "v": "duty", "text": "Deserters plotting the Crown’s patrols on a Crown survey. Remember the times. Ostrey will want them." }, { "v": "hat", "text": "A sergeant with a map and a plan to get his men out before the guns arrive. I have been that sergeant. I did not have a map." }], "opts": [{ "to": "hub", "q": "Go back." }], "say": ["“The Crown.” He taps a column of little rings along the far bank, the same rings as on the slate outside. “Every time a patrol comes down to the water and goes away again without crossing, a ring. Ostrey’s men come down at the third bell and the eighth. The dragoons have not come at all.”", "He sets the button down. “When they come, we will want to be somewhere else. This tells me where else is.”"] }, "v_cipher": { "by": "cipher", "opts": [{ "to": "<", "q": "Remember the line.", "flag": "ford_bm_route", "xp": 1 }, { "to": "<", "q": "Look away before he sees you looking." }], "say": ["Pencil under the hand: a second line, faint, leaving the river at the dead alder and going north over the hill, past the redoubts, where no road is drawn. Little marks along it, three of them, evenly spaced. Days. A march of three days, and he has rubbed it out and drawn it again."] }, "slate": { "mood": "smile", "voices": [{ "v": "ledger", "min": 1, "text": "Rings for the patrols on the map, rings for the valley on the slate. The same hand, the same zeros. He keeps one book for the Crown to find and one for himself." }, { "v": "hat", "text": "He knows how this ends, gunner. He is only arranging what they will read out at it." }], "opts": [{ "to": "hub", "q": "Go back." }], "say": ["“Coin is a thing men fight over. A slate is a thing men argue over.” He almost smiles. “I would rather run a house full of arguments.”", "“The valley crosses free. It is written down that the valley crosses free. When somebody comes with a rope to ask what we did at this bridge, there it is, in chalk, in my hand.”"] }, "ansgar": { "mood": "sad", "argue": [{ "lines": [["duty", "Squatters in a dead man’s house, under a dead man’s roof, on the Crown’s river."], ["hat", "Squatters keeping a dead man’s coat dry for his nephew. Look at the peg, rosette. Nobody has hung anything on it."], ["duty", "That is not a defence."], ["hat", "It is not meant as one. It is meant as a fact."]] }], "voices": [{ "v": "trace", "min": 1, "text": "The valley knows whose coat that is. So do the men at the tables. Look: not one of them sits with his back to it." }], "opts": [{ "to": "promise", "q": "“When he asks for it, give it to him.”", "once": true }, { "to": "hub", "q": "Go back." }], "say": ["“Ansgar.” He says the name the way you would set down a cup you did not want to drop. “It was his house. We did not take it from him. The Crown took him from it, and the house stood here with the door open in the rain.”", "“The boy comes for the coat sometimes. Looks at it. Does not take it.” He moves a button. “We leave it where it is.”"] }, "promise": { "mood": "calm", "flag": "ford_coat_promise", "opts": [{ "to": "hub", "q": "Go back." }], "say": ["“When he asks,” the bridgemaster says, “it is his. He has not asked.”"] }, "route": { "mood": "skeptic", "temp": ["nerve", 1, "you named his line and he did not deny it"], "voices": [{ "v": "duty", "text": "You will tell Ostrey. It is the Crown’s map, the Crown’s bridge, and the Crown’s deserters." }, { "v": "hat", "text": "Or you will not, and six men walk home over a hill. Neither of us gets to decide that tonight, gunner." }, { "v": "longroad", "min": 1, "text": "Three days north over the hill, with no road, in this weather. He knows. He has walked it already in his head, every step." }], "opts": [{ "to": "hub", "q": "Go back." }], "say": ["He takes his hand off the corner of the map, slowly, as though he had been holding it down in a wind. “Three days, if the weather holds and nobody follows.” He looks at you, properly, for the first time. “You will tell Ostrey.”", "It is not a question, and he does not wait for an answer. “Tell him the bridge will be standing when we go. Tell him the valley crossed free. Tell him whatever you like, courier. You will anyway.”"] } } };
+  GRAPH["ford:x_map"] = { "hub": "hub", "nodes": { "hub": { "voices": [{ "v": "cipher", "min": 1, "text": "Rings along the far bank, in the hand of the toll slate. He is counting something that is not money." }, { "v": "ledger", "min": 1, "text": "Third bell, eighth bell, third bell, eighth bell. Ostrey’s patrols keep a timetable. So does the man keeping track of them." }, { "v": "longroad", "min": 1, "text": "The road runs north from the bridge and stops at the edge of the sheet. Whatever is past that edge, nobody here has a map for." }], "opts": [{ "q": "Read the pencilled times.", "once": true, "check": { "sk": "wits", "dc": 8, "pass": "times_ok", "fail": "times_bad" } }, { "q": "Leave the map alone." }], "say": ["A surveyor’s sheet, the Crown’s own, folded so often that the river has worn white along the creases. Pewter buttons hold the corners flat. The valley is drawn in brown ink, the river in a grey wash; along the far bank, in pencil, a row of small careful rings, and beside each ring a time."] }, "times_ok": { "flag": "ford_bm_map", "learn": "Ostrey’s patrols come down to the river at the third bell and the eighth; the deserters keep the times on a map in the ferry house.", "voices": [{ "v": "duty", "text": "Ostrey’s rounds, in a deserter’s pencil. He will want to know his men are that easy to read." }, { "v": "hat", "text": "Or he will want to know that the bridge has been watching him for a week and has not once come over. Think about which, gunner." }], "opts": [{ "to": "hub", "q": "Step back from the table." }], "say": ["Third bell and eighth bell, every day this week, and twice the eighth bell came at the seventh. Beside the last three rings someone has written a single word in the same neat hand: rain. On rain days the patrol did not come down at all."] }, "times_bad": { "fx": { "notice": 1 }, "voices": [{ "v": "splinter", "min": -9, "text": "Musket in the crook of his arm, muzzle down, a step away. He chose the step." }], "opts": [{ "to": "hub", "q": "Step back from the table." }], "say": ["A shadow comes over the sheet. The man on the door is at your elbow, not quite touching you. “Maps are for people who are going somewhere,” he says. “Are you going somewhere?”"] } } };
+  GRAPH["ford:x_peg"] = { "hub": "hub", "nodes": { "hub": { "flag": "ford_ansgar_coat", "voices": [{ "v": "trace", "min": 1, "text": "Every peg on that rail has a coat on it except one, and the empty one is next to his. Nobody here hangs a coat beside a dead man’s." }, { "v": "splinter", "min": 1, "text": "The left shoulder is torn and mended, and torn again lower down. A ball goes in there and the man carries the coat home anyway." }, { "v": "hat", "text": "They kept his coat dry, gunner. Squatters do not do that. Guests do." }], "opts": [{ "show": function () { return S.done.gseen_ford_boy_uncle; }, "to": "pockets", "q": "Check the pockets.", "once": true }, { "q": "Leave the coat on its peg." }], "say": ["Five pegs on a rail by the back wall. Three carry the gang’s coats, hung by their collars, the green gone grey at the shoulders. The fourth is empty. On the last, by itself, hangs a ferryman’s oilskin, longer and darker than the rest, the shoulders worn pale where a rope has run across them for years. Somebody has inked a name inside the collar: ANSGAR. A boat-hook stands against the wall beside it, its shaft polished by one pair of hands."] }, "pockets": { "mood": "sad", "voices": [{ "v": "ledger", "min": 1, "text": "Sorted by size. He was keeping them for somebody who throws." }, { "sk": "grit", "min": 1, "text": "The boy at the weir throws badly, and every one he throws is flat. He has been coming in here for them." }], "opts": [{ "to": "hub", "q": "Put the pebbles back, in their order.", "xp": 1 }], "say": ["Pebbles. Flat ones, the kind that skip, a pocketful of them, sorted by size, the smallest in the left pocket and the large ones in the right. Under them a fishhook in a twist of paper, and a lump of tallow for a rope."] } } };
+  GRAPH["ford:x_tolls"] = { "hub": "hub", "nodes": { "hub": { "voices": [{ "v": "ledger", "min": 1, "text": "Every ration taken at the bridge, kept and labelled. They are not eating the toll. They are keeping it." }, { "v": "wire", "min": 1, "text": "SIX MEN. ONE STEWPOT. NOTHING ON THIS SHELF HAS BEEN OPENED. STOP." }, { "v": "hat", "text": "“In case somebody asks, later, who went by.” Pim said it, gunner. You thought he was joking." }], "opts": [{ "show": function () { return S.done.brg_paid; }, "to": "mine", "q": "Look for your own tag.", "once": true }, { "show": function () { return (S.done.brg_friend && !(S.done.brg_paid)); }, "to": "story", "q": "Look for your own tag.", "once": true }, { "q": "Leave the shelf." }], "say": ["A shelf by the back wall, and on it, in rows, the toll: rations tied up in string, each one with a scrap of paper on it. A heel of bread. A twist of tea. Three biscuits. A candle end. A dried fish. Every tag carries a name and a day in the same square hand: a tinker, Monday. Drover, Monday. A priest, Wednesday, with a line drawn through and a note: paid in a story, returned."] }, "mine": { "voices": [{ "v": "duty", "text": "They have written your name in a deserter’s book. Whatever they mean by it, it is now evidence." }, { "v": "hat", "text": "They have written you down as a man who paid and said nothing. You have been described more cruelly, gunner, by better clerks." }], "opts": [{ "to": "hub", "q": "Leave it where it is." }], "say": ["Your ration is there, at the end of the second row, still in its paper and tied with the same string. The tag says, in the square hand: Courier. Crown seal, unbroken. Paid without a word."] }, "story": { "voices": [{ "v": "battery", "min": 1, "text": "They wrote us on the wall, gunner. Not on the shelf. On the wall." }], "opts": [{ "to": "hub", "q": "Leave it where it is." }], "say": ["You look along the rows and do not find yourself. Then you see it, chalked on the wall above the shelf in the square hand, among a dozen others: Courier. Paid in a story. Redoubt Nine."] } } };
   GRAPH["fun_cross:x_grave"] = { "hub": "hub", "nodes": { "hub": { "voices": [{ "v": "cipher", "min": 1, "show": function () { return !(S.done.fun_buttons); }, "q": "“Check his pockets.”", "go": "v_pocket", "no": "“Let him keep what he kept.”", "text": "Eight stubs of thread. He cut the buttons off and never picked the thread out. A man who means to be done with a thing picks out the thread." }, { "v": "battery", "min": 1, "text": "We never got a grave, any of us. The clay did it for us all at once. Do this one properly. Square corners." }, { "v": "mud", "max": 2, "text": "It is a good hole. Deep and quiet and nobody asks anything of you down there. You could lie down next to him and nobody would notice for an hour." }], "opts": [{ "to": "kneel", "q": "Kneel at the edge of the grave, bare-headed.", "once": true }, { "to": "salute", "q": "Salute him, sergeant to sergeant.", "once": true }, { "to": "speech", "q": "Say a few words over him.", "once": true }, { "q": "Step back from the grave." }], "say": function () { return (S.done.fun_speech ? ["The grave waits for the spades. Vane lies in it in his greatcoat with his hands folded. The words have been said. The rain has started again, very fine, and is beading on the coat where the buttons were."] : ["Vane lies in the grave in his greatcoat with his hands folded. Without the barricade behind him he is smaller than you remember, a man of forty with grey in his stubble and a ploughman’s neck. Eight stubs of red thread show on the coat where the Crown’s buttons were cut away. The rain is beading on them.", "The keeper looks at you, and then at the grave, and then at you again. Somebody is expected to say something. Nobody has decided who."]); } }, "v_pocket": { "by": "cipher", "opts": [{ "to": "buttons", "q": "Kneel and open the pocket." }, { "to": "<", "q": "Leave it. It is his." }], "say": ["Right breast pocket. There is a weight in it, small and uneven, that pulls the greatcoat a finger’s width out of true. Metal. Several pieces. You have seen a man keep his medals that way when he did not want to wear them."] }, "buttons": { "mood": "sad", "flag": "fun_buttons", "learn": "Vane kept the eight Crown buttons he cut off his coat, wrapped in oilcloth in his breast pocket.", "voices": [{ "v": "duty", "text": "He kept them. Lay them on his chest. Let him go into the ground a soldier of the Crown, whatever he did with the rest of his life. It is what he wanted, or he would have thrown them in the river." }, { "v": "hat", "text": "Or give them to the man at the foot of the grave, who fetched the knife. Let the living decide what the buttons were for." }, { "v": "ledger", "min": 2, "text": "Eight brass buttons, Crown issue. A coin apiece at any sutler’s on this road. He does not need them." }], "opts": [{ "to": "b_chest", "q": "Lay the buttons on his chest, in a row, as they were.", "tally": "loyal", "side": "duty" }, { "to": "b_hob", "q": "Hold them out to Hob.", "tally": "merciful", "side": "hat" }, { "to": "b_pocket", "q": "Pocket them. Brass is brass.", "tally": "cynical", "fx": { "coin": 2 } }], "say": ["Eight brass buttons, the Crown’s arms on each, wrapped in a twist of oilcloth to keep the shine. Vane cut them off his coat with Hob’s knife and kept every one of them, dry, for a year.", "Hob, at the foot of the grave, has gone very still."] }, "b_chest": { "fx": { "duty": 1 }, "voices": [{ "v": "duty", "text": "Thank you. I did not think you would. That is the first time I have been proud of you at a graveside." }], "opts": [{ "to": "hub", "q": "Stand." }], "say": ["You lay them down the front of the greatcoat where they were sewn, eight of them, and the rain beads on the brass. The keeper makes a small sound. Karrow takes his hat off, which he had not done before.", "For a moment, in the grave, there is a sergeant of the Crown."] }, "b_hob": { "mood": "cry", "flag": "hob_button", "fx": { "trust": 1 }, "voices": [{ "v": "hat", "text": "There. That gap is the truest thing on this road." }], "opts": [{ "to": "hub", "q": "Stand." }], "say": ["Hob looks at the buttons in your palm for a long time. Then he takes one, only one, and puts it in his own pocket, and closes your hand over the rest. “Put them with him,” he says hoarsely. “I only wanted the one. He would have given me the one.”", "You lay seven buttons on the greatcoat. There is a gap in the row where the eighth should be, and it looks right."] }, "b_pocket": { "mood": "disgust", "fx": { "trust": -2 }, "voices": [{ "v": "duty", "text": "You robbed a corpse of the Crown’s arms. I have no words for it that I would say in front of a lady." }, { "v": "hat", "text": "Well. At least now you know what Vane felt like, every day." }], "opts": [{ "to": "hub", "q": "Stand, and do not look at anyone." }], "say": ["The buttons go into your pocket with a small, final clink. Nobody says anything. The keeper looks at you the way she looked at Vane the first day, from behind a shutter."] }, "kneel": { "flag": "fun_respect", "fx": { "st": -1 }, "voices": [{ "v": "longroad", "text": "There. You have done the thing that costs nothing and is remembered longest." }], "opts": [{ "to": "hub", "q": "Stand." }], "say": function () { return ((S.done.dace_came = true), ["You kneel in the wet clay at the edge, bare-headed, and the cold comes up through your knee into the bad leg. You do not pray; you are not sure you have one left that fits. You stay there long enough for the rain to find the back of your neck.", "When you stand, the keeper is looking at you differently. So, at the spruce line, is someone else."]); } }, "salute": { "flag": "fun_respect", "argue": [{ "lines": [["duty", "You salute a deserter. In the Crown’s coat. In front of witnesses."], ["hat", "You salute a sergeant who held a bridge at Holm and then a road at Cross-Pillars. The coat is the Crown’s. The hand is yours."], ["duty", "The Articles do not have a clause for a hand that is yours."], ["hat", "Then the Articles should get out more."]] }], "voices": [{ "v": "duty", "max": 0, "text": "Fine. Salute him. You were never mine all the way through anyway." }], "opts": [{ "to": "hub", "q": "Hold the salute until the rosette stops talking.", "tally": "merciful", "side": "hat" }, { "to": "hub", "q": "Drop your hand. The rosette is right.", "side": "duty" }], "say": function () { return ((S.done.dace_came = true), ["You come to attention at the foot of the grave, heels together in the clay, and bring your hand up to the peak of your shako. Not the parade salute; the slow one, the one for funerals, that you learned at fifteen and have used too often since.", "Karrow, who was at Ashford, straightens on the stile without meaning to."]); } }, "speech": { "voices": [{ "v": "parade", "min": 1, "text": "Chin up. Pitch it to carry to the treeline. A funeral is a parade that walks slower." }, { "v": "bluff", "min": 2, "text": "Every eulogy is a bluff. You do not know the man. Neither do they, quite. Make them believe you both did." }, { "v": "ringing", "show": function () { return (pastN() >= 2); }, "text": "“For the Empire! For civilization! For order!” A man said that once over a whole column, before they went in. Say anything but that." }], "opts": [{ "q": "“He held this road when nobody else would. He held it wrong, but he held it.”", "check": { "sk": "nerve", "dc": 8, "pass": "sp_held", "fail": "sp_held_bad" } }, { "q": "“I shot him. I want that said out loud, here, by me.”", "tally": "merciful", "check": { "sk": "nerve", "dc": 9, "pass": "sp_truth", "fail": "sp_truth_bad", "red": true } }, { "to": "sp_crown", "q": "Give him the Crown’s words: “Sergeant Vane broke his oath. The ground takes everyone.”", "tally": "loyal", "side": "duty" }, { "to": "sp_ashford", "q": "Tell them about the men who broke at Ashford and walked home.", "side": "hat", "past": 2 }, { "to": "sp_keeper", "q": "Say nothing. Look at the keeper, and step aside for her." }], "say": ["You step to the head of the grave. The keeper moves aside half a pace, which is as much as she will give. Hob leans on his spade. Karrow coughs and stops. The rain is the only thing talking."] }, "sp_held": { "flag": "fun_spoke", "fx": { "trust": 1 }, "opts": [{ "to": "spoke", "q": "Step back." }], "say": function () { return ((!(S.done.fun_speech)) && (S.done.fun_speech = "held"), ((S.done.fun_respect || ("held" === "truth"))) && (S.done.dace_came = true), ["“He held this road,” you say, and your voice carries the way it used to across a gun-line, “when the Crown did not, and the rebels did not, and nobody else would. He held it badly. He held it for himself and for two hungry men and for nobody else.” You stop. “But he held it. Most of the men I served with never got to choose what they held.”", "Hob makes a sound that might be a laugh or might not. The keeper nods, once, the way she would at a loaf that had risen properly."]); } }, "sp_held_bad": { "mood": "embarrassed", "flag": "fun_spoke", "opts": [{ "to": "spoke", "q": "Step back." }], "say": function () { return ((!(S.done.fun_speech)) && (S.done.fun_speech = "held_bad"), ((S.done.fun_respect || ("held_bad" === "truth"))) && (S.done.dace_came = true), ["“He held this road,” you begin, and it comes out as a parade-ground bark, and the carters flinch. You try to soften it and lose the sentence entirely. In the end you say, “He was a soldier,” which is true and is not what you meant, and step back with your face hot."]); } }, "sp_truth": { "mood": "sad", "flag": "fun_spoke", "fx": { "trust": 2 }, "xp": 1, "thought": "vane_grave", "voices": [{ "v": "duty", "text": "You confessed a correct act as though it were a sin. I do not understand you. I am not sure I am meant to." }, { "v": "hat", "text": "That is the bravest thing I have heard a soldier say over a grave. I have heard a great many soldiers say things over graves." }], "opts": [{ "to": "spoke", "q": "Step back." }], "say": function () { return ((!(S.done.fun_speech)) && (S.done.fun_speech = "truth"), ((S.done.fun_respect || ("truth" === "truth"))) && (S.done.dace_came = true), ["“I shot him,” you say. Not loud. “Point-blank, in the lane, with a Crown pistol, because he was between the Crown’s paper and the road south. I would do it again. I want that said out loud, here, by me, so that nobody has to whisper it.”", "The rain. Nobody moves. Then the keeper says, “Thank you,” as though you had handed her something heavy and she had been waiting for it a long time. Hob looks at you across the grave and, after a while, nods."]); } }, "sp_truth_bad": { "mood": "disgust", "flag": "fun_spoke", "fx": { "notice": 1, "st": -1 }, "voices": [{ "v": "mud", "text": "You should have stayed quiet. Quiet is safe. Next time, be quiet." }], "opts": [{ "to": "spoke", "q": "Step back." }], "say": function () { return ((!(S.done.fun_speech)) && (S.done.fun_speech = "truth_bad"), ((S.done.fun_respect || ("truth_bad" === "truth"))) && (S.done.dace_came = true), ["“I shot him,” you say, and then your voice goes, the way it went in the clay, and what comes out next is not the speech you meant. It sounds like an excuse. It sounds like the Crown’s orders, recited. Dace, somewhere at the spruce line, laughs once, high and ugly.", "Nobody else says anything. The keeper looks at the ground."]); } }, "sp_crown": { "mood": "skeptic", "flag": "fun_spoke", "fx": { "duty": 1, "trust": -1 }, "voices": [{ "v": "duty", "text": "Correct. Clean. They will not thank you for it, and they are not meant to." }, { "v": "hat", "text": "Correct, yes. So is a gallows." }], "opts": [{ "to": "spoke", "q": "Step back." }], "say": function () { return ((!(S.done.fun_speech)) && (S.done.fun_speech = "crown"), ((S.done.fun_respect || ("crown" === "truth"))) && (S.done.dace_came = true), ["“Sergeant Vane,” you say, “broke his oath to the Crown, and the Crown does not forgive it. The ground takes everyone. It takes him now.” It is correct. It is the form of words they used for the men they hanged at the Copper Coast. Karrow puts his hat back on."]); } }, "sp_ashford": { "flag": "fun_spoke", "fx": { "trust": 1 }, "xp": 1, "voices": [{ "v": "ringing", "text": "The salient. The wagon-line. You heard the wheels from under the clay." }], "opts": [{ "to": "spoke", "q": "Step back." }], "say": function () { return ((!(S.done.fun_speech)) && (S.done.fun_speech = "held"), ((S.done.fun_respect || ("held" === "truth"))) && (S.done.dace_came = true), ["“At Ashford,” you say, “the salient broke. Some men broke with it and were shot for running. Some men broke with it and walked home, and nobody ever asked them where they went.” You look down at the stubs of thread. “I think he was a man who walked home and found there was no home on the road. So he built a gate on it.”", "Karrow, on the stile, has his hand over his eyes. When he takes it away he is looking at you as if he has seen you before, somewhere loud."]); } }, "sp_keeper": { "mood": "sad", "flag": "fun_spoke", "fx": { "trust": 1 }, "voices": [{ "v": "longroad", "text": "You did not have to say anything. You only had to know whose turn it was." }], "opts": [{ "to": "spoke", "q": "Step back." }], "say": function () { return ((!(S.done.fun_speech)) && (S.done.fun_speech = "keeper"), ((S.done.fun_respect || ("keeper" === "truth"))) && (S.done.dace_came = true), ["You look at the keeper and step aside, and after a moment she understands and comes to the head of the grave with her ladle.", "“I fed him porridge when he was six,” she says. “His mother sent him down for it with a bowl. He always licked the ladle. He took my flour this winter and I hated him for it every day, and I would give him a bowl now if he would get up and lick the ladle.” She stops. “That is all. Fill it in.”"]); } }, "spoke": { "opts": [{ "q": "Step back from the grave." }], "say": ["The words are said. The keeper looks at the sky, which is the colour of wet slate, and says it will rain harder by dusk. That is the end of the speeches."] } } };
   GRAPH["fun_cross:keeper"] = { "hub": "hub", "nodes": { "hub": { "mood": "sad", "voices": [{ "v": "trace", "text": "She is the one the valley will ask, later, how the soldier behaved at the grave. Whatever she says will be how it was." }], "opts": [{ "to": "before", "q": "“You knew him before.”", "once": true }, { "to": "want", "q": "“Do you want me here?”", "once": true }, { "q": "Stand beside her." }], "say": function () { return (S.done.gmet_fun_cross_keeper ? ["The keeper stands at the head of the grave. “Well, soldier?”"] : ["The keeper stands at the head of the grave with the ladle held in both hands, upright, the way a verger holds a cross. Her eyes are dry. “I did not think I would come,” she says. “And then I thought, who else will. The children? They are frightened of him still. They will be frightened of him until the clay is on.”"]); } }, "before": { "learn": "Vane grew up at Cross-Pillars. His mother kept the toll-gate for the Crown and never got her pension.", "voices": [{ "v": "duty", "min": 1, "text": "A Crown toll-keeper’s son. Enlisted at sixteen. He was ours, all the way down. That is why it is worse." }, { "v": "hat", "text": "A drum and a red coat. That is how they got all of us. The trick is in noticing they never come back for you with the drum." }], "opts": [{ "to": "hub", "q": "“I see.”" }], "say": ["“Since he was six. His mother kept the toll for the Crown, when there was a Crown on this road that paid for it. He went for a soldier at sixteen because the recruiting sergeant had a red coat and a drum.” She smiles thinly. “He came back at forty without a finger and without the coat, and he thought he was owed the toll. Perhaps he was. His mother never got her pension.”"] }, "want": { "opts": [{ "to": "hub", "q": "Stand beside her." }], "say": function () { return ((S.trust >= 1) ? ["“Yes.” No hesitation. “You shot him and you came back with a spade. That is two things done, and most men only do the first.”"] : ["She considers it. “I want somebody here who will remember it was done properly. You will. You have the face of a man who remembers too much.” She looks back at the grave. “That will have to do instead of wanting.”"]); } } } };
   GRAPH["fun_cross:karrow"] = { "hub": "hub", "nodes": { "hub": { "voices": [{ "v": "longroad", "min": 1, "text": "He drove the wounded once. You can tell by the way he keeps glancing at the lie of the ground, looking for the smoothest way to carry a body." }], "opts": [{ "to": "hate", "q": "“Did you hate him?”", "once": true }, { "show": function () { return (S.done.gseen_back_cross_karrow_stand || (pastN() >= 1)); }, "to": "ashford", "q": "“You drove at Ashford, the keeper said.”", "once": true }, { "q": "Leave him to his blanket." }], "say": ["Karrow sits on the stile with a blanket round his shoulders, too sick to dig and too stubborn to stay in. “I have buried a lot of men off a wagon-tail,” he says. “Never one who stole my horse. It is a strange feeling. Not as bad as I hoped.”"] }, "hate": { "opts": [{ "to": "hub", "q": "“Maybe.”" }], "say": ["“For a week. Then the fever came and I had no room for it.” He coughs into his fist. “Hate wants feeding like anything else. I had nothing to feed it with.” He looks at you. “You will find that out, if you have not. It is the one kindness of being hungry.”"] }, "ashford": { "mood": "sad", "voices": [{ "v": "ringing", "text": "One of ours went up wrong. The whole gun. You could see it from the meadow." }, { "v": "mud", "text": "Do not tell him. Lie down in it. You have been lying down in it for months, and nobody has asked." }], "opts": [{ "to": "there", "q": "“I was on that redoubt.”", "past": 1 }, { "to": "hub", "q": "Say nothing.", "tally": "frightened" }], "say": ["“Wagon-line, below the salient.” He does not look away from the grave. “We heard the big guns go up on the redoubt, one after another, and then one of ours went up wrong, the whole gun, like a barrel of lamp oil. You could see it from the meadow.” He shakes his head. “After that the columns came back down the lane faster than they went up it.”"] }, "there": { "mood": "fear", "fx": { "st": 1 }, "xp": 1, "opts": [{ "to": "hub", "q": "“Thank you.”" }], "say": ["Karrow looks at you, properly, for the first time: at the shoulder, the way you hold your head to hear on one side. “The third battery,” he says, not a question. “God help you.” He holds out his huge hand, and when you take it he does not let go for a while. “We carried some of you. Down to the meadow. Not many.”"] } } };
@@ -30065,118 +30410,145 @@ function ldMakePostal(o) { return o && o.on ? ldSetup(o, [ldDie('Left die', LD_S
   GRAPH["wirehut:x_sounder"] = { "hub": "hub", "nodes": { "hub": { "voices": [{ "v": "wire", "min": 1, "text": "Dash-dot-dash-dash. Y. Then nothing. Then a long burst too fast for you. Whoever is sending south of here is better at it than anyone in the Crown’s service." }, { "v": "cipher", "min": 0, "text": "Letters going by in the dark, readable by anyone who has learned to listen. The cipher room spends a week turning a page into groups. This thing just says it, out loud, to everyone." }], "opts": [{ "q": "Leave it to Quill." }], "say": ["A brass sounder on a mahogany base, an armature that clacks down and springs up, and beside it a key worn bright where a thumb goes. Two glass battery jars under the bench, blue with vitriol, smelling like a cipher room. The sounder stops, starts, stops."] } } };
   // </pt-dialogue>
   // ===================================================================================================
-  // V182: THE CAMP SHELTER, AS THE TEXT SAYS IT IS. The road camp used corrugated-tin sheds (sh_leanto, sh_leanto2). Now:
-  // - without a horse, "a lean-to of cut branches and your greatcoat": two forked uprights, a ridge pole, rafters slanting
-  //   back to the ground, cut boughs laid over them, the greatcoat thrown over half the roof, leaf litter to lie on;
-  // - with a horse, the tent off the saddle roll; a cold camp pulls brush over whichever it is, and lights no fire.
+  // V185: MORE WAYS TO MOVE. Twenty-two new movements for the one rigged body (assets/w3d_people.js, made by
+  // tools/anim/people_clips.py from the rig's own movements; the same keys go to Godot as data/anim/people_more.json):
+  //   at a table: writesit (the Provost Marshal at his ledger), stamp, sitdrink, sitcards, sitlaugh;
+  //   standing: leanmap (the bridgemaster), guard (musket at the order), idlelook, idlewarm, idlepipe, idlelean, stretch;
+  //   two at a time: talkgest and listen, laugh, shrug, point, give;
+  //   the courier: ringbell (Skelling's rope), salute (first meeting an officer), search and reachhigh (looking at low and high things).
+  // Who does what: NODE_ACTS (a conversation reaching a node makes the courier or the speaker do something once);
+  // things looked at make the courier crouch, reach, or lean in by their height; background people pick from more idles,
+  // and two who stand close together talk: one says and the other listens, turn and turn about (PAIR_*).
   // ===================================================================================================
-  function mPole(m, a, b, r, seg) {
-    seg = seg || 5;
-    var d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], L = Math.hypot(d[0], d[1], d[2]) || 1; d = [d[0] / L, d[1] / L, d[2] / L];
-    var up = Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
-    var u = [d[1] * up[2] - d[2] * up[1], d[2] * up[0] - d[0] * up[2], d[0] * up[1] - d[1] * up[0]], ul = Math.hypot(u[0], u[1], u[2]); u = [u[0] / ul, u[1] / ul, u[2] / ul];
-    var v = [d[1] * u[2] - d[2] * u[1], d[2] * u[0] - d[0] * u[2], d[0] * u[1] - d[1] * u[0]];
-    var ring = function (c, k) { var t = k / seg * Math.PI * 2, cs = Math.cos(t) * r, sn = Math.sin(t) * r; return [c[0] + u[0] * cs + v[0] * sn, c[1] + u[1] * cs + v[1] * sn, c[2] + u[2] * cs + v[2] * sn]; };
-    for (var k = 0; k < seg; k++) mQuad(m, ring(a, k), ring(a, k + 1), ring(b, k + 1), ring(b, k), 0.3, L / 0.6);
-  }
-  PROC.cp_leanto = function () {
-    var R = 1.3, Z0 = 0.35, ZB = -1.35, W = 1.25;   // the ridge's height and place, where the roof meets the ground, half the width
-    var rnd = function (i) { var x = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return x - Math.floor(x); };
-    var roofY = function (z) { return R * (z - ZB) / (Z0 - ZB); };
-    return [
-      // the frame: forked uprights, the ridge pole, rafters to the ground, a few cross-ties
-      pp(function (m) {
-        [-W, W].forEach(function (x) {
-          mPole(m, [x, 0, Z0], [x, R + 0.05, Z0], 0.05);
-          mPole(m, [x, R - 0.02, Z0], [x - 0.12 * Math.sign(x), R + 0.22, Z0 + 0.04], 0.03);
-          mPole(m, [x, R - 0.02, Z0], [x + 0.1 * Math.sign(x), R + 0.2, Z0 - 0.05], 0.03);
-        });
-        mPole(m, [-W - 0.25, R + 0.04, Z0], [W + 0.25, R + 0.04, Z0], 0.045);
-        for (var i = 0; i < 7; i++) { var x = -W + i * (2 * W / 6) + (rnd(i) - 0.5) * 0.08; mPole(m, [x, R + 0.06, Z0 + 0.12], [x + (rnd(i + 9) - 0.5) * 0.1, -0.02, ZB - 0.1], 0.03, 4); }
-        mPole(m, [-W - 0.1, roofY(-0.5) + 0.06, -0.5], [W + 0.1, roofY(-0.5) + 0.06, -0.5], 0.025, 4);
-      }, 't_bark', [0.62, 0.52, 0.4]),
-      // cut boughs laid over the rafters, row on row, ragged at the edges; and a few stood against each end
-      pp(function (m) {
-        for (var row = 0; row < 7; row++) {
-          var z1 = Z0 + 0.15 - row * 0.27, z0 = z1 - 0.36;
-          for (var c = 0; c < 5; c++) {
-            var i = row * 5 + c, x0 = -W - 0.2 + c * 0.55 + (rnd(i) - 0.5) * 0.18, x1 = x0 + 0.62 + rnd(i + 3) * 0.2, j = 0.06 + rnd(i + 7) * 0.05;
-            mQuad(m, [x0, roofY(z0) + j, z0], [x1, roofY(z0) + j, z0], [x1 + 0.05, roofY(z1) + j + 0.05, z1], [x0 - 0.05, roofY(z1) + j + 0.05, z1], 1, 1);
-          }
+  var _wRigInit185 = wRigInit;
+  wRigInit = function () {
+    var r = _wRigInit185();
+    if (r && !r._more && W3D.rigMore) {
+      r._more = true;
+      var M = W3D.rigMore;
+      for (var k in M.clips) {
+        var c = M.clips[k], qi = wB64(c.q, Int16Array), ti = wB64(c.t, Int16Array), Q = new Float32Array(c.n * RG_NJ * 4), T = new Float32Array(c.n * 3);
+        for (var f = 0; f < c.n * RG_NJ; f++) {
+          var x = qi[f * 3] / 32767, y = qi[f * 3 + 1] / 32767, z = qi[f * 3 + 2] / 32767;
+          Q[f * 4] = x; Q[f * 4 + 1] = y; Q[f * 4 + 2] = z; Q[f * 4 + 3] = Math.sqrt(Math.max(0, 1 - x * x - y * y - z * z));
         }
-        [-W - 0.05, W + 0.05].forEach(function (x, s) {
-          for (var k = 0; k < 4; k++) { var z = ZB + 0.25 + k * 0.4, top = roofY(z) + 0.05; mQuad(m, [x, 0, z - 0.22], [x, 0, z + 0.22], [x, top, z + 0.05], [x, top, z - 0.05], 1, 1); }
-        });
-      }, null, [0.24, 0.31, 0.17]),
-      pp(function (m) {   // older boughs, browned, under and between the fresh ones
-        for (var row = 0; row < 6; row++) { var z1 = Z0 - row * 0.3, z0 = z1 - 0.3; mQuad(m, [-W - 0.15, roofY(z0) + 0.04, z0], [W + 0.15, roofY(z0) + 0.04, z0], [W + 0.15, roofY(z1) + 0.04, z1], [-W - 0.15, roofY(z1) + 0.04, z1], 1, 1); }
-      }, null, [0.33, 0.27, 0.16]),
-      // the greatcoat, thrown over the left of the roof, its skirt hanging over the ridge at the front
-      pp(function (m) {
-        var x0 = -W + 0.05, x1 = -0.05, za = Z0 + 0.05, zb = ZB + 0.55;
-        mQuad(m, [x0, roofY(zb) + 0.14, zb], [x1, roofY(zb) + 0.16, zb], [x1, roofY(za) + 0.16, za], [x0, roofY(za) + 0.14, za], 1, 1);
-        mQuad(m, [x0, roofY(za) + 0.14, za], [x1, roofY(za) + 0.16, za], [x1 + 0.04, R - 0.45, Z0 + 0.32], [x0 - 0.04, R - 0.5, Z0 + 0.3], 1, 1);
-        mPole(m, [x0 + 0.12, R + 0.12, Z0 + 0.12], [x0 + 0.5, R - 0.2, Z0 + 0.34], 0.07, 5);   // a sleeve
-      }, 't_canvas', [0.42, 0.42, 0.4]),
-      // leaf litter to lie on, under the roof
-      pp(function (m) { mQuad(m, [-W + 0.1, 0.02, ZB + 0.3], [W - 0.1, 0.02, ZB + 0.3], [W - 0.15, 0.03, Z0 + 0.15], [-W + 0.15, 0.03, Z0 + 0.15], 1, 1); }, null, [0.36, 0.26, 0.14])
-    ];
+        for (var j = 0; j < c.n * 3; j++) T[j] = ti[j] / 8000;
+        r.clips[k] = { n: c.n, d: c.d, Q: Q, T: T };
+      }
+      for (var l in M.loop) RG_LOOP[l] = 1;
+    }
+    return r;
   };
-  // ── V183: phones and a shareable copy ──────────────────────────────────────────────────────────────
-  // On a touch screen the help line speaks of taps, key hints go, and below 600px the ledger folds into
-  // two thin rows so the story starts under the 3D view, not a screen further down. window.PT_SHARE
-  // (set only in the copy made for other players) keeps the developer tools out of reach.
-  (function () {
-    var touch = false;
-    try { touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window; } catch (e) {}
-    var css = document.createElement('style');
-    css.textContent =
-      'body.ptouch kbd, body.ptouch .kb { display: none !important; }' +
-      '.actions.col .btn { box-sizing: border-box; }' +
-      'html.ptshare #ldev, html.ptshare #devt, html.ptshare .setrow:has(#devt) { display: none !important; }' +
-      '@media (max-width: 600px) {' +
-      ' .ledger { padding: 6px 10px 6px !important; }' +
-      ' .vitals { display: flex !important; flex-wrap: wrap; gap: 2px 12px !important; }' +
-      ' .vital { font-size: 10px !important; letter-spacing: .03em !important; }' +
-      ' .vital .bar { display: none !important; }' +
-      ' .vital .row { justify-content: flex-start !important; gap: 4px !important; }' +
-      ' .vital .row span img.vi { width: 10px; height: 10px; margin-right: 2px; }' +
-      ' .ledger { position: relative; }' +
-      ' .stamps { position: absolute; right: 10px; top: 22px; margin: 0 !important; font-size: 10px !important; }' +
-      ' .stamps .stamp { display: none !important; }' +
-      ' .satchel { flex-wrap: nowrap !important; overflow-x: auto; gap: 4px !important; margin-top: 4px !important; scrollbar-width: none; }' +
-      ' .satchel .tool { flex: none; border-width: 4px !important; padding: 5px 7px !important; font-size: 10px !important; letter-spacing: .03em !important; white-space: nowrap; }' +
-      ' .actions.wback { margin: 4px 0 !important; }' +
-      ' .actions.wback .btn { padding: 6px 12px !important; font-size: 11px !important; }' +
-      ' #whelp { font-size: 9px !important; letter-spacing: .04em !important; padding: 3px 6px !important; max-width: calc(100vw - 110px); }' +
-      ' #wstopbox { max-height: 40vh !important; font-size: 14px; }' +
-      '}';
-    document.head.appendChild(css);
-    if (window.PT_SHARE) {
-      document.documentElement.classList.add('ptshare');
-      DEV = false; setDev = function () { DEV = false; };
+  // a conversation reaching one of these nodes: [who ('me' the courier, 'them' the one you are talking to), movement, 'first' = only once]
+  var NODE_ACTS = {
+    'chapel:x_rope:rung': ['me', 'ringbell'],
+    'chapel:x_bell:touch': ['me', 'interact'],
+    'ford:ostrey:hub': ['me', 'salute', 'first'],
+    'oak:tallis:hub': ['me', 'salute', 'first'],
+    'malice:corvane:hub': ['me', 'salute', 'first'],
+    'ford:boy:skip': ['them', 'throw'],
+    'ford:bmaster:map': ['them', 'point'],
+    'ford:bmaster:slate': ['them', 'shrug'],
+    'ford:x_peg:pockets': ['me', 'interact'],
+    'ford:x_tolls:mine': ['me', 'reachhigh']
+  };
+  function nodeAct(key, tid) {
+    var a = NODE_ACTS[key]; if (!a || !W.scene || W.scene.road) return;
+    if (a[2] === 'first') { if (S.done['nact_' + key]) return; S.done['nact_' + key] = true; }
+    if (a[0] === 'me') wRigAct(W.scene.pl, a[1]);
+    else { var p = (W.scene.people || []).filter(function (q) { return q.id === tid; })[0]; if (p) wRigAct(p, a[1]); }
+  }
+  var _graphShow185 = graphShow;
+  graphShow = function (ti, nodeId, ctx) {
+    var r = _graphShow185(ti, nodeId, ctx);
+    try { var t = whoAt(ti); if (t) nodeAct(curId() + ':' + t.id + ':' + nodeId, t.id); } catch (e) {}
+    return r;
+  };
+  // looking at a thing: how high it is says how the courier looks (shared with Godot: world.gd LOOK_LOW / LOOK_HIGH)
+  var LOOK_LOW = 0.75, LOOK_HIGH = 1.7;
+  function lookMove(hy) { return hy >= LOOK_HIGH ? 'reachhigh' : hy <= LOOK_LOW ? 'search' : 'interact'; }
+  var _wThingT185 = wThingT;
+  wThingT = function (sceneId, o, sp, L) {
+    var t = _wThingT185(sceneId, o, sp, L), act = t.act;
+    t.act = function () { try { if (W.scene && W.scene.pl && !W.scene.road) wRigAct(W.scene.pl, lookMove(t.hy || 0.6)); } catch (e) {} return act.apply(this, arguments); };
+    return t;
+  };
+  // background people: more ways to stand about (the same list, by the same hash, in Godot via the exported "want")
+  var IDLES = ['idle', 'arms', 'idlelook', 'talk', 'idle', 'idlewarm', 'idlepipe', 'arms', 'idlelook', 'idle'];
+  var _wRigExtra185 = wRigExtra;
+  wRigExtra = function (p, y, face, dt) {
+    if (!p.rgIdle && !p.sit && !p.want && !p.walk && !p.cast && p.rgStance === undefined) {
+      var h = p._rgh !== undefined ? p._rgh : (p._rgh = wRigHash((p.id || '') + p.hue + Math.round((p.home ? p.home[0] : p.x) * 10)));
+      p.rgIdle = IDLES[h % IDLES.length];
     }
-    if (!touch) return;
-    document.body.classList.add('ptouch');
-    var help = document.getElementById('whelp');
-    if (help) help.textContent = 'Tap to walk · tap twice to run · pinch to zoom';
-    // " · Esc" on buttons means nothing without a keyboard
-    function strip(root) {
-      var tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), n, hit = [];
-      while ((n = tw.nextNode())) if (/ · Esc\b/.test(n.nodeValue)) hit.push(n);
-      hit.forEach(function (t) { t.nodeValue = t.nodeValue.replace(/ · Esc\b/g, ''); });
-    }
-    strip(document.body);
+    if (p.pair) pairWant(p);
+    return _wRigExtra185(p, y, face, dt);
+  };
+  // two standing close together, facing each other: one talks, the other listens, and every PAIR_TURN seconds they swap
+  var PAIR_NEAR = 2.4, PAIR_TURN = 4.5;
+  function pairWant(p) {
+    var t = (performance.now() / 1000) + p.pair.seed, ph = Math.floor(t / PAIR_TURN), talking = (ph % 2 === 0) === p.pair.lead;
+    p.want = talking ? (ph % 4 < 2 ? 'talkgest' : 'talk') : 'listen';
+    if (p.pair.ph !== ph) { if (p.pair.ph !== undefined && !talking && ph % 3 === 0) wRigAct(p, ph % 2 ? 'laugh' : 'shrug', 0.2, false, 0.85); p.pair.ph = ph; }
+  }
+  function pairUp(sc) {
+    var free = (sc.extras || []).filter(function (e) { return !e.sit && !e.walk && !e.mounted && !e.cast && !e.noTurn && !e.gang && !e.levy && !e.want && !e.down && !e.rgWpn && !e.rgUni && !(e.hidden && e.hidden()); });
+    var used = {};
+    free.forEach(function (a, i) {
+      if (used[i]) return;
+      var best = -1, bd = PAIR_NEAR;
+      free.forEach(function (b, j) { if (j === i || used[j]) return; var d = Math.hypot(a.x - b.x, a.z - b.z); if (d < bd && d > 0.6) { bd = d; best = j; } });
+      if (best < 0) return;
+      var b = free[best]; used[i] = used[best] = true;
+      var seed = (Math.abs(a.x * 7.3 + a.z * 3.1) % 1) * PAIR_TURN;
+      a.pair = { lead: true, seed: seed, mate: sc.extras.indexOf(b) }; b.pair = { lead: false, seed: seed, mate: sc.extras.indexOf(a) };
+      a.face = Math.atan2(b.x - a.x, b.z - a.z); b.face = Math.atan2(a.x - b.x, a.z - b.z); a.noTurn = b.noTurn = true;
+    });
+  }
+  var _wbV185 = wBuild;
+  wBuild = function (id, L0) {
+    var sc = _wbV185(id, L0);
     try {
-      new MutationObserver(function (ms) {
-        for (var i = 0; i < ms.length; i++) {
-          var m = ms[i];
-          if (m.type === 'characterData') { if (/ · Esc\b/.test(m.target.nodeValue)) m.target.nodeValue = m.target.nodeValue.replace(/ · Esc\b/g, ''); }
-          else for (var j = 0; j < m.addedNodes.length; j++) { var a = m.addedNodes[j]; if (a.nodeType === 1) strip(a); else if (a.nodeType === 3 && / · Esc\b/.test(a.nodeValue)) a.nodeValue = a.nodeValue.replace(/ · Esc\b/g, ''); }
-        }
-      }).observe(document.body, { childList: true, subtree: true, characterData: true });
-    } catch (e) {}
+      pairUp(sc);
+      // figures added after the place editor named everyone (the bridge gang, the ferry house) get their names too,
+      // the same way: e:<x>,<z>#n in the order they stand in the list (Godot's place_edits.gd does the same)
+      var seen = {};
+      (sc.extras || []).forEach(function (p) {
+        if (!p._po) { try { pplOrig(p); } catch (e) { p._po = { x: p.x, z: p.z }; } }
+        var b = 'e:' + (p.id || (p._po.x.toFixed(2) + ',' + p._po.z.toFixed(2)));
+        seen[b] = (seen[b] || 0) + 1; if (!p._pk) p._pk = b + '#' + seen[b];
+      });
+    } catch (e) { setTimeout(function () { throw e; }); }
+    return sc;
+  };
+  // the Provost Marshal at his desk: sitting, writing in the ledger, and now and then a stamp
+  (function () {
+    var A = LAYOUT.malice.areas.hq, old = A.props;
+    A.props = function (add, id, marks, lights) {
+      var mine = function (m, x, z, o) {
+        if (m === 'f_table' && x === 0 && z === -1.7) { o = { h: 0.8, sx: 1.3, sz: 1.3 }; }
+        else if ((m === 'papers' || m === 'lantern') && o && o.y === 1.04 && z < -1) { var o2 = {}; for (var k in o) o2[k] = o[k]; o2.y = 0.8; o = o2; }
+        else if (m === 'f_chair2' && x === 0.2 && z === -3.1) { o = { h: 1.18, r: Math.PI }; z = -3.12; }
+        return add(m, x, z, o);
+      };
+      old(mine, id, marks, lights);
+      add('cp_ledger', 0.15, -2.2, { y: 0.8, r: 0.15 });
+    };
+    A.spots.corvane = [0.2, -2.8, { sit: true, want: 'writesit', face: 0, noTurn: true, ax: -0.2, az: -0.35 }];
   })();
+  var STAMP_EVERY = 9;
+  var _wAnimTick185 = wAnimTick;
+  wAnimTick = function (t0, dt, sc0) {
+    var r = _wAnimTick185.apply(this, arguments);
+    try {
+      var sc = W.scene; if (sc && !sc.road) (sc.people || []).forEach(function (p) {
+        if (p.want !== 'writesit') return;
+        p._stampT = (p._stampT || 0) + (dt || 0);
+        if (p._stampT > STAMP_EVERY) { p._stampT = 0; wRigAct(p, 'stamp'); }
+      });
+    } catch (e) {}
+    return r;
+  };
 
   cloudInit();
   start();
