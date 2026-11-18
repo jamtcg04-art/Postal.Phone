@@ -4467,7 +4467,11 @@ function ldMakePostal(o) { return o && o.on ? ldSetup(o, [ldDie('Left die', LD_S
   // see-through: a tall prop standing between the camera and the player (or someone close by you could talk to) is drawn as a stipple.
   // The test is exact for the prop's box: a ray from the target toward the camera, against the prop's rotated bounds.
   var NOFADE = /^(mm_|stall$|f_stall|e_markettent|tent$|barrel|f_barrel|pt_barrel|mk_crate|crates$|f_crate|f_box|pt_box|pt_chest|sacks|mk_wagon|b_cart|pt_cart|cart$|banner|b_lamp|pt_lamp|signpost|well$|fountain|block$|d_bench|f_bench|f_table|f_stool|f_shelf|keg$|lantern|coffin|mn_cart)/;
+  // V186: no see-through inside rooms (the ferry house, the taproom, the cells...) or at a road camp (tent, lean-to, brush); the yard stays outdoors
+  var FADE_KEEP = { 'yard': 1 };
+  function wNoFade(sc) { return !!(sc.camp || (sc.area && !FADE_KEEP[sc.area])); }
   function wOccTargets(sc) {
+    if (wNoFade(sc)) return [];
     var pl = sc.pl, lift = sc.lift ? sc.lift(pl.x, pl.z) : 0, up = lift > 0.3, t = [[pl.x, 0.25 + lift, pl.z, up], [pl.x, 0.9 + lift, pl.z, up], [pl.x, 1.55 + lift, pl.z, up]];
     return t;
   }
@@ -5955,8 +5959,8 @@ function ldMakePostal(o) { return o && o.on ? ldSetup(o, [ldDie('Left die', LD_S
       var tx = bd.tex[o.tex] || bd.tex[Object.keys(bd.tex)[0]];
       bd.groups.forEach(function (g) {
         if ((o.drop && o.drop.indexOf(g[0]) >= 0) || (!o.head && (g[0] === 'head' || g[0] === 'Shako material'))) return;
-        if (g[4] && tx && tx.ok) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tx.t); gl.uniform1f(u.uUseT, 1); gl.uniform3f(u.uC, dim, dim, dim); }
-        else { var c = (o.gcol && o.gcol[g[0]]) || g[3] || o.c || [0.3, 0.3, 0.3]; gl.uniform1f(u.uUseT, 0); gl.uniform3f(u.uC, c[0] * dim, c[1] * dim, c[2] * dim); }
+        if (g[4] && tx && tx.ok && !(o.flat && o.flat[g[0]])) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tx.t); gl.uniform1f(u.uUseT, 1); gl.uniform3f(u.uC, dim, dim, dim); }
+        else { var c = (o.flat && o.flat[g[0]]) || (o.gcol && o.gcol[g[0]]) || g[3] || o.c || [0.3, 0.3, 0.3]; gl.uniform1f(u.uUseT, 0); gl.uniform3f(u.uC, c[0] * dim, c[1] * dim, c[2] * dim); }
         gl.drawElements(gl.TRIANGLES, g[2], bd.it, g[1] * bd.ib);
       });
       gl.uniform1f(u.uUseT, 0);
@@ -30157,7 +30161,7 @@ function ldMakePostal(o) { return o && o.on ? ldSetup(o, [ldDie('Left die', LD_S
             lights.push({ x: x, z: 2.25, y: 0, w: 1.4, h: 3.2, tex: 'l_shaft', r: 0, rz: -0.35, c: SHAFT }, { x: x - 0.6, z: 1.1, flat: true, w: 1.8, d: 2.2, c: [0.14, 0.14, 0.16] });
           });
         },
-        spots: { bmaster: [-2.35, -2.12, { face: 0, noTurn: true, rgIdle: 'leanmap', ax: -1.55, az: -1.15, rgUni: { body: 'soldier_g', tex: 'blue', dim: 0.82, drop: ['Shako material', 'Havresac 01'], more: [] } }] },
+        spots: { bmaster: [-2.35, -2.12, { face: 0, noTurn: true, rgIdle: 'leanmap', ax: -1.55, az: -1.15 }] },
         ospots: {
           map: [-2.35, -1.45, { ax: -1.5, az: -1.1, pr: 0.8, hy: 1.1 }],
           peg: [1.03, -2.55, { ax: 1.0, az: -1.75, pr: 0.8, hy: 1.9 }],
@@ -30187,10 +30191,7 @@ function ldMakePostal(o) { return o && o.on ? ldSetup(o, [ldDie('Left die', LD_S
       [-1.75, 0.15, 0, 'sitcards', false], [-0.6, 0.15, 0, 'sitdrink', true], [-1.2, 1.75, Math.PI, 'sitcards', false],
       [1.0, 0.15, 0, 'sitlaugh', false], [1.8, 1.75, Math.PI, 'sittalk', true]
     ];
-    function fhGang(i, blue) {
-      if (blue) return { body: 'soldier_g', tex: 'blue', drop: ['Shako material', 'Havresac 01'], dim: 0.9, more: i % 2 ? [['cap', [0.12, 0.15, 0.24]]] : [] };
-      return { body: i % 2 ? 'soldier' : 'soldier_g', tex: 'green', drop: ['Shako material', 'Havresac 01'], dim: 0.85, more: i % 3 ? [['cap', [0.15, 0.18, 0.14]], ['capband', [0.42, 0.36, 0.2]]] : [['hat', [0.2, 0.17, 0.13]]] };
-    }
+    function fhGang(i, blue) { return gangLook(i); }   // V186: coats off
     var _wbV184 = wBuild;
     wBuild = function (id, L0) {
       var sc = _wbV184(id, L0);
@@ -30549,6 +30550,25 @@ function ldMakePostal(o) { return o && o.on ? ldSetup(o, [ldDie('Left die', LD_S
     } catch (e) {}
     return r;
   };
+
+
+  // ===================================================================================================
+  // V186: THE BRIDGE KEEPERS ARE NOT OSTREY'S SOLDIERS. Both wore the Crown's blue coat. The bridge gang (the sentry on the
+  // span, the men at the toll, the bridgemaster, the crew in the ferry house) now has the coats off: a dark shirt and waistcoat
+  // in place of the blue (drawn flat, so the coat's cloth is gone), the dark trousers kept, the pack and shako gone, the
+  // cross belts left on over the shirt as a man wears them when the coat is off, and the sabre belt with them. Ostrey's levies,
+  // the line and the Provost's men are as they were. Godot: Figure.dress() reads the same "flat" colours (data/anim, figure.gd).
+  // ===================================================================================================
+  var GANG_SHIRT = [0.2, 0.17, 0.15], GANG_TROUS = [0.15, 0.14, 0.14], GANG_BELT = [0.52, 0.44, 0.33];
+  function gangLook(i) {
+    var cap = [[0.15, 0.13, 0.12], [0.17, 0.16, 0.14], [0.12, 0.12, 0.13]][i % 3], sh = i % 2 ? GANG_SHIRT : [0.18, 0.18, 0.19];
+    return { body: 'soldier_g', tex: 'blue', dim: 0.88, drop: ['Shako material', 'Havresac 01'],
+      flat: { 'Soldat torso': sh, 'Soldat materiel': GANG_TROUS }, gcol: { 'Crosbelt': GANG_BELT },
+      more: i % 4 === 3 ? [['hat', [0.2, 0.17, 0.13]]] : i % 4 === 1 ? [] : [['cap', cap]] };
+  }
+  var GANG_IDS = { bridge: 1, d1: 2, d2: 3, bmaster: 4 };
+  var _wRigUniform186 = wRigUniform;
+  wRigUniform = function (id, name) { return GANG_IDS[id] ? gangLook(GANG_IDS[id]) : _wRigUniform186(id, name); };
 
   cloudInit();
   start();
