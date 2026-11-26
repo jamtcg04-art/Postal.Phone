@@ -1991,6 +1991,103 @@ function ending(id, log) {
   $('again').onclick = newGame; $('totitle').onclick = title;
 }
 
+// ---------- V199: Cell Ten. When the courier was arrested, or the run carried the odd-run trait, he is next door ----------
+function lgCellTen() { var L = LG(); return !!(L && (L.cellTen || L.ending === 'arrest' || L.ill)); }
+function lgGlue() { var L = LG(); return L && L.ill && L.ill.glue === 'varnish' ? 'varnish' : 'tired'; }
+function lgGear() { var L = LG(); var g = (L && L.gear) || []; return g.length ? g.join(', ') : 'a tin case, a coat, a satchel, a warrant, a pair of boots'; }
+NPC.courier = { name: 'The courier', mono: 'PC', hue: 40,
+  role: function () { return S.f.courierUp ? 'Cell Ten. On his feet, in his stockings.' : lgGlue() === 'varnish' ? 'Cell Ten. Stuck to the bench.' : 'Cell Ten. Stripped to his shirt. Not getting up.'; },
+  here: function () { return lgCellTen() && !lockdown(); },
+  start: function () { return S.seen.talk_courier ? 'hub' : 'start'; },
+  nodes: {
+    start: { say: function () { var L = LG();
+        var t = 'There is a grate low in the wall between Nine and Ten, the size of a book. Through it, in the grey light, a man sits on the shelf of Cell Ten in his shirt and stockings. No coat, no boots, no belt. They have taken everything a man could hang himself with, and everything a courier could carry.';
+        t += lgGlue() === 'varnish' ? '\n\nThe shelf under him shines. “Varnished,” he says, before you can ask. “This morning. The Governor likes a thing done properly. I sat down before it was dry.” He tries to shift, and the shelf makes a sound like a boot coming out of mud, and does not let him. “I am not staying,” he says. “I am stuck. There is a difference.”'
+          : '\n\nHe has not moved since they put him there. “They took the case,” he says to the wall. “And the coat, and the tin, and my boots. I could get up.” A long pause. “I don’t think I will.” Not despair, you think. Just the end of a very long road, and nothing left to walk with.';
+        if (L && L.metClerk === 'told') t += '\n\n“You,” he says, turning his head. “Nine. I told you about the case, through the grate, the first night. Did you write it down?”';
+        else if (L && L.metClerk === 'quiet') t += '\n\n“Nine,” he says. “You asked me the first night, and I said nothing. I am sorry for that. I am saying something now.”';
+        else t += '\n\n“You’ll be the clerk,” he says. “The one who turned my paper into roads. I hoped you were careful.”';
+        return t; },
+      voices: [{ v: 'cipher', text: 'The courier. Your case came in on his back. He is the only man in Malice who knows what was in it before you did.' }, { v: 'damp', text: 'Look at him. He has stopped. You could stop too. It is warm, stopping.' }],
+      opts: [{ q: '“What did they take off you?”', to: 'gear' }, { q: '“Tell me about the road.”', to: 'road' }, { q: 'Nod, and leave him be.', to: 'hub' }] },
+    hub: { say: function () { return S.f.courierUp ? 'The courier is on his feet in Cell Ten, walking three paces and back, three paces and back, the way a man walks who has remembered he has legs.' : lgGlue() === 'varnish' ? 'The courier is still on the shelf in Ten. He has got one hand free. It took him all morning.' : 'The courier is still on the shelf in Ten, looking at the wall as if it were a long way off.'; },
+      opts: [
+        { q: '“What did they take off you?”', to: 'gear' },
+        { q: '“Tell me about the road.”', to: 'road' },
+        { q: 'Patter: “On your feet, post. The Crown has another letter for you.”', show: function () { return !S.f.courierUp && lgGlue() === 'tired'; }, v: 'patter', dc: 9,
+          ok: { text: 'Something in the old voice of command gets through. He stands up, slowly, as if the shelf had been holding him and has let go, and puts one hand on the wall, and then takes it off again. “Another letter,” he says. “Yes. All right.”', set: { courierUp: true }, to: 'hub' },
+          bad: { text: '“No more letters,” he says to the wall, quite kindly. “Not today.”', to: 'hub' } },
+        { q: 'Knuckles: reach through the grate and pull him off the varnish', show: function () { return !S.f.courierUp && lgGlue() === 'varnish'; }, v: 'knuckles', dc: 8, hrs: 1,
+          ok: { text: 'You get both hands on his collar through the grate and he gets both feet on the wall, and with a noise like a sail tearing he comes off the shelf, and leaves the seat of his breeches behind on it. He stands in Cell Ten in his shirt-tails with enormous dignity. “Thank you,” he says. “I shall want that back, at the Assize.”', set: { courierUp: true }, to: 'hub' },
+          bad: { text: 'You pull. He pulls. The varnish wins. Tobit, through the other wall, laughs until he coughs.', fx: { st: -1 }, to: 'hub' } },
+        { q: '“When I go, come with me.”', show: function () { return S.f.courierUp && !S.f.courierComes; }, to: 'comes', set: { courierComes: true } },
+        { q: 'Leave him.', to: '<' }
+      ] },
+    gear: { say: function () { return '“Everything.” He counts it on his fingers. “' + lgGear() + '. On a shelf in the turnkey’s room with a number chalked under it. Ten.” He looks at his stockinged feet. “The boots were good boots. I walked the valley in them. I would like them back before they hang somebody in them.”'; },
+      voices: [{ v: 'tally', text: 'A shelf in the turnkey’s room, numbered. Property rooms are kept by men who like lists. Lists can be read.' }], opts: [{ q: 'Go back.', to: 'hub' }] },
+    road: { say: function () { var L = LG(); return '“Five stops. Rain at every one. ' + (L && L.ending === 'arrest' ? 'They took me at the end of it, with the case still on my back, and put me down here to think about what I carried.' : 'And at the end of it, somehow, here. I do not remember the cart. I remember a goose.') + '” He almost smiles. “Every road in that valley ends at this fort. Did you know that? Nobody tells you. You just keep walking and the milestones get smaller.”'; },
+      opts: [{ q: 'Go back.', to: 'hub' }] },
+    comes: { say: '“Over the wall?” He looks at the grate, and at you, and at his own stockinged feet. “I walked the whole valley with a case I was not allowed to open. I can walk out of a gaol with nothing in my hands at all.” He nods. “When you go, knock twice on the grate.”', opts: [{ q: 'Go back.', to: 'hub' }] }
+  } };
+LOCS.cell.people.push('courier');
+(function () {
+  var rec = LOCS.records; if (rec && rec.objs) rec.objs.push({ id: 'property', name: 'The property ledger', blurb: 'Every prisoner’s things, by cell.', show: lgCellTen,
+    text: function () { return 'A ledger on the secretary’s desk, ruled by a man who likes rules: every prisoner’s things, by cell, received and signed for. Cell Nine: one coat, clerk’s, ink on cuffs. Cell Ten: ' + lgGear() + '. Received of the provost’s men. Under it, in another hand: “Boots — to the Governor’s orderly. Good boots.”'; },
+    voices: [{ v: 'tally', text: 'Ten. They stripped him to the stockings and wrote down every piece. They will do it to you too, after Thursday.' }] });
+})();
+var afterLines0 = afterLines;
+afterLines = function (id) {
+  var L = afterLines0(id);
+  if (lgCellTen()) L.splice(L.length - 1, 0, ['The courier in Cell Ten', id === 'escaped' && S.f.courierComes ? 'Came over the wall behind you in his stockings, and walked the whole valley south without boots, and said it was the lightest he had ever travelled.' : id === 'riot' ? 'Walked out through the gate in the riot, very slowly, and was the last man out. Nobody stopped him. Nobody ever had.' : S.f.courierUp ? 'Was on his feet when they came for him. They said afterwards that he walked to wherever it was as if he had been sent there with a letter.' : (lgGlue() === 'varnish' ? 'Is still on the shelf in Ten. The Governor has had the varnish scraped twice. It does not matter.' : 'Is still on the shelf in Ten, looking at the wall as if it were a long way off.')]);
+  return L;
+};
+
+// ---------- V201: the old telegraph line, for a courier who left the sky-fire unresolved; the armour in the records room, on an odd run ----------
+function lgSky() { var L = LG(); return L ? L.sky || null : null; }
+(function () {
+  var rec = LOCS.records; if (!rec || !rec.objs) return;
+  rec.objs.push({ id: 'key', name: 'An old telegraph key', blurb: 'Under a dust sheet, its wire still running out through the wall.', show: function () { return !!lgSky(); },
+    text: function () { return 'Under a dust sheet in the corner, a telegraph key and sounder on a deal table, the brass gone brown. The wire runs out through a hole in the wall and away, the Governor’s old private line to the depot, cut years ago at the depot end. There is no battery on it. Somebody has kept the brass oiled anyway.' + (lgSky() === 'line' ? '\n\nOn the table, under the key, somebody has pencilled a single word on the deal: RECEIVED. The pencil is new.' : ''); },
+    voices: function () { return [{ v: 'tally', text: 'A cut line, no battery, oiled brass. Somebody in this gaol still listens on it.' }, { v: 'choir', text: 'We are on it. We have always been on it. Put your ear down.' }]; },
+    acts: function () { return [
+      { id: 'listen', t: 'Put your ear to the sounder and listen', h: 'Only at night, when the gaol is quiet. Eyes, to make anything of it.', v: 'tally', dc: 8, hrs: 1, need: function () { return S.sneak || lockdown(); }, why: 'The day is too loud.', show: function () { return !S.f.skyHeard; },
+        ok: { text: function () { var L = LG(); return 'For a long time nothing. Then the sounder ticks, once, by itself, and again, slow and even, one every few seconds, like a bell for a funeral. Under the slow ticks, quicker, faint, half-words you copy onto the back of your hand: …TELL MOTHER… …IS ANYBODY… …MALICE CALLING…' + (L && L.skyNames ? '\n\nAnd then a quick bright hand, cheerful, like a woman reading the weather: names, the Crown’s dead, with the regiment and the place. The last name before the line goes quiet is a cipher clerk of Fort Malice. Yours. With a date beside it, three days from now, and no word about how.' : '\n\nThen one word, very clear, and the line goes quiet: NINE.'); }, set: { skyHeard: true }, voices: [{ v: 'cipher', text: 'Somebody is keying it. From the depot end, from a cart, from anywhere along the wire. A trick. It has to be a trick.' }, { v: 'choir', text: 'It is not a trick. It is a roll-call. You are on it, clerk. Everybody is, eventually.' }] },
+        bad: { text: 'An hour of dust and silence, and your ear numb against the brass. Once, you are almost sure, it ticks. Almost.', fx: { st: -1 } } }
+    ]; } });
+  rec.objs.push({ id: 'armour', name: 'The old Governor’s armour', blurb: 'In the corner, a suit of plate with a turnkey’s cap on the helmet.', show: function () { var L = LG(); return !!(L && L.ill); },
+    text: function () { return 'In the corner of the records room, on a frame, a suit of old plate that belonged to a Governor two hundred years dead. Somebody has hung a turnkey’s cap on the helmet for a joke, and somebody else has hung a ring of keys on the gauntlet, which is not a joke, because they are real keys.' + (lgGlue() === 'varnish' ? '\n\nThe whole suit has been varnished. It shines in the moonlight like a new coffin. Of course it has been varnished.' : ''); },
+    voices: function () { return [{ v: 'knuckles', text: 'Real keys. On a gauntlet. Just reach out.' }, { v: 'damp', text: 'It has been standing in that corner longer than any of us have been lying down. Ask it how.' }]; },
+    acts: function () { return [
+      { id: 'knock', t: 'Knock on the breastplate', h: 'No roll.', show: function () { return !S.f.armourSpoke; },
+        ok: { text: function () { return 'It rings, hollow. Then, from inside the helmet, quite close and very polite, a voice says: ' + (lgGlue() === 'varnish' ? '“Do not sit down in Ten. They varnished the bench. They varnished me too. I have been standing here since Michaelmas.”' : '“They took my gear as well, you know. I only kept this.”') + '\n\nYou wait. It says nothing else. The keys on the gauntlet have not moved.'; }, set: { armourSpoke: true } } },
+      { id: 'keys', t: 'Take the keys off the gauntlet', h: 'Hands. Without it noticing.', v: 'knuckles', dc: 9, show: function () { return !S.f.armourKeys; },
+        ok: { text: 'You lift the ring off the gauntlet a key at a time. The gauntlet does not close. You are sure it does not close. The keys are for the lumber room, the old armoury and Cell Ten, and they are very old, and the one for Ten has been oiled.', set: { armourKeys: true } },
+        bad: { text: 'The gauntlet closes. Not fast. Not hard. Just closed, around the ring and around two of your fingers, and then, after a long moment in which you do not breathe, open again. You leave the keys where they are.', fx: { st: -1 } } }
+    ]; } });
+})();
+
+// ---------- V202: the courier's gorget, in the property ledger, and what the clerk makes of it ----------
+function lgGorget() { var L = LG(); return L && L.gorget ? L.gorget : null; }
+(function () {
+  var rec = LOCS.records; if (!rec || !rec.objs) return;
+  var P = rec.objs.filter(function (o) { return o.id === 'property'; })[0]; if (!P) return;
+  var LINE = {
+    plain: 'One gorget, field police, brass, No. 17. Entered against the Lieut. Fairley, reported killed beyond the hazel without it. How the prisoner came by it: not stated.',
+    bridge: 'One gorget, field police, brass, No. 41. Cpl. Dace’s; lost at the Tanner bridge in the spring, with his boots. Boots not recovered.',
+    captain: 'One gorget, field police, SILVER, No. 1. Captain Rusk’s. The captain is reported dead on the Oakhaven road. Underlined twice. Forwarded to the Provost Marshal.',
+    forged: 'One gorget, brass, No. 112. NOT ISSUED. The field police stop at ninety. Struck by V—, see the trading-post file. To the melt.'
+  };
+  var SAY = {
+    plain: 'A dead lieutenant’s rank, at a courier’s throat. The ledger does not ask why. That is the ledger’s great virtue and its only one.',
+    bridge: 'Dace. Lost at a bridge full of deserters, and found on a man in Cell Ten. Somebody will draw a line between those two facts. Somebody always does.',
+    captain: 'Silver. Number one. Whoever is in Ten did not come by that in a shop. You copy the line into your head, the way you copy anything you may need to read again.',
+    forged: 'A hundred and twelve. A forgery so plain the clerk who entered it could not resist saying so. Venn’s, by the hand. You know that hand. Half the receipts in this fort are in it.'
+  };
+  var oText = P.text, oVoices = P.voices;
+  P.text = function () { var t = typeof oText === 'function' ? oText() : oText, G = lgGorget(); if (!G || !LINE[G.k]) return t; return t + '\n\nBelow, in a separate entry, as if it would not share a line with boots and a coat: ' + (G.worn ? 'Taken from the prisoner’s throat. ' : 'Found wrapped in the prisoner’s satchel. ') + LINE[G.k]; };
+  P.voices = function () { var v = typeof oVoices === 'function' ? oVoices() : (oVoices || []), G = lgGorget(); return G && SAY[G.k] ? v.concat([{ v: 'cipher', text: SAY[G.k] }]) : v; };
+})();
+
 // ---------- the courier's record, from The Postal Trace (same site, same browser) ----------
 var LEG_KEY = 'pt_legacy';
 function readLegacy() { try { var L = JSON.parse(localStorage.getItem(LEG_KEY) || 'null'); return L && L.v ? L : null; } catch (e) { return null; } }
@@ -2003,7 +2100,7 @@ var LG_ROAD = {
   depot: function (L) { return 'He came through the gate on the third day and put the case on the provost’s desk' + (L.tcase.sealBroken ? ', its seal already cracked,' : ', seal and all,') + ' and was marched off to depot guard before the wax was cold.'; },
   truth: function () { return 'He gave it to Colonel Hask with his own hands, and Hask read it twice and opened the gates for the refugee carts. The Crown has not forgiven the garrison for that. It has not finished deciding about the cipher room either.'; },
   late: function () { return 'He came in too late for the first columns. The rear columns, three hundred men, had waited for his orders, and got them.'; },
-  arrest: function () { return 'He came in under guard. The provost took the case off him at the gate and wrote his name in a ledger. He is somewhere in the casemates above you, or below you. Nobody will say which.'; },
+  arrest: function () { return 'He came in under guard. The provost took the case off him at the gate, and the rest of him at the foot of the stair, and put him in Cell Ten, next to yours.'; },
   death: function () { return 'He never came in. A patrol found the case on the trace beside a man face down in the corduroy, and carried it the rest of the way.'; },
   ashes: function () { return 'He never came in. The Row says he burned the case in a stable fire and walked south. But the High Command sends everything twice, and the second copy came by another road.'; },
   sold: function () { return 'He came in, or somebody did. A summary of the same orders had been sold at Marrow Cross the day before, for coin. Crake knows it. Crake has decided it does not matter.'; },
@@ -2044,7 +2141,7 @@ function vaneStory() {
 function lgAfter() {
   var L = LG(); if (!L) return null;
   var who = { crown: 'the Crown’s courier', torn: 'a courier with two masters', valley: 'the valley’s courier' }[L.allegiance] || 'the courier';
-  var t = { depot: 'Stood depot guard at Fort Malice the week your Assize sat. ', truth: 'Walked out of Fort Malice with Hask’s garrison and the refugee carts. ', late: 'Came in too late and was sent back up the trace with the next post. ', arrest: 'Was in the casemates the whole three days, two floors above you. ', death: 'Lies on the trace where he fell. ', ashes: 'Walked south with a stranger’s coat over his shoulders. ', sold: 'Spent thirty coins somewhere south of the river. ', gate: 'Left the case at Tanner’s Bridge and walked away from the war. ' }[L.ending] || '';
+  var t = { depot: 'Stood depot guard at Fort Malice the week your Assize sat. ', truth: 'Walked out of Fort Malice with Hask’s garrison and the refugee carts. ', late: 'Came in too late and was sent back up the trace with the next post. ', arrest: 'Was in Cell Ten the whole three days, one wall away from you. ', death: 'Lies on the trace where he fell. ', ashes: 'Walked south with a stranger’s coat over his shoulders. ', sold: 'Spent thirty coins somewhere south of the river. ', gate: 'Left the case at Tanner’s Bridge and walked away from the war. ' }[L.ending] || '';
   return ['The courier', t + 'The Row remembers him as ' + who + (lgViolent() ? ', and the provost remembers the men he fought.' : '.')];
 }
 var LG_OFF = { ford: ['Captain Ostrey', 'the redoubts at the river bend'], oak: ['Major Tallis', 'Oakhaven'], ridge: ['Pell', 'the ridge earthworks'], malice: ['Provost Corvane', 'Fort Malice'] };
